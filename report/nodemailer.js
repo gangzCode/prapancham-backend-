@@ -12,7 +12,7 @@ const CONTACT_US_RECEIVER_EMAIL = process.env.CONTACT_US_RECEIVER_EMAIL;
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
-  port: 587,
+  port: 465,
   secure: false, // Use `true` for port 465, `false` for all other ports
   auth: {
     user: SENDER_EMAIL,
