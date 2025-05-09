@@ -36,6 +36,8 @@ const userRoutes = require("./routers/user");
 const authRoutes = require("./routers/auth");
 const faqRoutes = require("./routers/faq");
 const contactUsFormRoutes = require("./routers/contactUs-form");
+const advertistmentRoutes = require("./routers/advertistment");
+const eventRoutes = require("./routers/event");
 
 const api = process.env.API_URL;
 
@@ -44,6 +46,8 @@ app.use(`${api}/auth`, authRoutes);
 app.use(`${api}/user`, userRoutes);
 app.use(`${api}/faq`, faqRoutes);
 app.use(`${api}/contact-us`, contactUsFormRoutes);
+app.use(`${api}/advertistment`, advertistmentRoutes);
+app.use(`${api}/event`, eventRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")

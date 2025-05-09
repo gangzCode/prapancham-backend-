@@ -49,28 +49,29 @@ router.post(`/inquire`, async (req, res) => {
   }
 });
 
-router.get(`/`, verifyTokenAndAdmin, async (req, res) => {
+router.get("/", verifyTokenAndAdmin, async (req, res) => {
   try {
-    const emailList = await NewsLetter.find();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    if (!emailList || emailList.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No newsletter subscribers found.",
-      });
-    }
+    const skip = (page - 1) * limit;
 
-    return res.status(200).json({
-      success: true,
-      message: "Newsletter subscriber list retrieved successfully.",
-      data: emailList,
+    const newsletter = await NewsLetter.find({ isDeleted: false })
+      .skip(skip)
+      .limit(limit);
+
+    const totalNewsLetter = await NewsLetter.countDocuments({ isDeleted: false });
+
+    res.status(200).json({
+      newsletter,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalNewsLetter / limit),
+        totalItems: totalNewsLetter,
+      },
     });
   } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred while fetching newsletter subscribers.",
-      error: err.message,
-    });
+    res.status(500).json({ message: err.message });
   }
 });
 

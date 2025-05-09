@@ -12,6 +12,10 @@ const adTypeSchema = mongoose.Schema({
     type: {
         type: String,
         required: true,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
     }
 })
 

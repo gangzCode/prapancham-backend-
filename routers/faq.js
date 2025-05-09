@@ -37,19 +37,53 @@ router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
-router.get("/all-faq", verifyTokenAndAdmin, async (req, res) => {
+router.get("/all", verifyTokenAndAdmin, async (req, res) => {
   try {
-    const faqs = await Faq.find({ isDeleted: false });
-    res.status(200).json(faqs);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const faqs = await Faq.find({ isDeleted: false })
+      .skip(skip)
+      .limit(limit);
+
+    const totalFaqs = await Faq.countDocuments({ isDeleted: false });
+
+    res.status(200).json({
+      faqs,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalFaqs / limit),
+        totalItems: totalFaqs,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-router.get("/active-faq", async (req, res) => {
+router.get("/active", async (req, res) => {
   try {
-    const faqs = await Faq.find({ isActive: true });
-    res.status(200).json(faqs);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const faqs = await Faq.find({ isActive: true })
+      .skip(skip)
+      .limit(limit);
+
+    const totalFaqs = await Faq.countDocuments({ isActive: true });
+
+    res.status(200).json({
+      faqs,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalFaqs / limit),
+        totalItems: totalFaqs,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -22,6 +22,18 @@ const advertistmentSchema = mongoose.Schema({
         type: String,
         enum: ['home', 'contact', 'events','news','obituary','create-memorial'],
         required: false,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
+    },
+    uploadedDate: {
+        type: Date,
+        default: Date.now,
+    },
+    expiryDate: {
+        type: String,
+        required:true,
     }
 })
 

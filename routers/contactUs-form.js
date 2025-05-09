@@ -18,8 +18,25 @@ router.post("/", async (req, res) => {
 
 router.get("/", verifyTokenAndAdmin, async (req, res) => {
   try {
-    const contactUsFormData = await ContactUsForm.find({ isDeleted: false });
-    res.status(200).json(contactUsFormData);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const contactUsForm = await ContactUsForm.find({ isDeleted: false })
+      .skip(skip)
+      .limit(limit);
+
+    const totalContactUsForm = await ContactUsForm.countDocuments({ isDeleted: false });
+
+    res.status(200).json({
+      contactUsForm,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalContactUsForm / limit),
+        totalItems: totalContactUsForm,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

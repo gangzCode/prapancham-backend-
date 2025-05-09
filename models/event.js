@@ -70,6 +70,22 @@ const eventSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    uploadedDate: {
+      type: Date,
+      default: Date.now,
+    },
+    expiryDate: {
+      type: String,
+      required:true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
