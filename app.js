@@ -57,24 +57,26 @@ app.get('/', (req,res,next) =>{
 //     res.send(req.oidc.isAuthenticated()? 'Logged in' : 'Logged out')
 // })
 
-const PORT = process.env.PORT || 4000;
-
-//Database
-mongoose
-    .connect(process.env.CONNECTION_STRING, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        dbName: process.env.DB_NAME
-    })
-    .then(() => {
-        console.log('we are using ' + process.env.DB_NAME);
-        console.log('Database Connection is ready...');
-    })
-    .catch((err) => {
-        console.log(err);
+// Database connection
+let isConnected = false;
+const connectToDB = async () => {
+  if (isConnected) return;
+  
+  try {
+    await mongoose.connect(process.env.CONNECTION_STRING, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      dbName: process.env.DB_NAME,
     });
+    isConnected = true;
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error('MongoDB connection failed:', err);
+    process.exit(1);
+  }
+};
 
-//server
-app.listen(PORT, () => {
-    console.log('server is running http://localhost:4000');
-});
+// Connect to DB only once before handling requests
+connectToDB();
+
+module.exports = app;
