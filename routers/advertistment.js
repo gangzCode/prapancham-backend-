@@ -86,11 +86,11 @@ router.post("/ad-type", verifyTokenAndAdmin, async (req, res) => {
 router.put("/ad-type/:id", verifyTokenAndAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { imageSize, type, status } = req.body;
+      const { imageSize, type, isActive } = req.body;
   
       const updatedAdType = await AdType.findByIdAndUpdate(
         id,
-        { imageSize, type, status },
+        { imageSize, type, isActive },
         { new: true, runValidators: true }
       );
   

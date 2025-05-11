@@ -20,11 +20,11 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
 router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { question, answer, listingNumber, status } = req.body;
+    const { question, answer, listingNumber, isActive } = req.body;
 
     const updatedFaq = await Faq.findByIdAndUpdate(
       id,
-      { question, answer, listingNumber, status },
+      { question, answer, listingNumber, isActive },
       { new: true, runValidators: true }
     );
 
