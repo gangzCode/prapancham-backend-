@@ -38,6 +38,8 @@ const faqRoutes = require("./routers/faq");
 const contactUsFormRoutes = require("./routers/contactUs-form");
 const advertistmentRoutes = require("./routers/advertistment");
 const eventRoutes = require("./routers/event");
+const newsRoutes = require("./routers/news");
+const obituaryRemembarancePackagesRoutes = require("./routers/obituaryRemembarance-packages");
 
 const api = process.env.API_URL;
 
@@ -48,10 +50,14 @@ app.use(`${api}/faq`, faqRoutes);
 app.use(`${api}/contact-us`, contactUsFormRoutes);
 app.use(`${api}/advertistment`, advertistmentRoutes);
 app.use(`${api}/event`, eventRoutes);
+app.use(`${api}/news`, newsRoutes);
+app.use(`${api}/obituaryRemembarance-packages`, obituaryRemembarancePackagesRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")
 });
+
+//const PORT = process.env.PORT || 4000;
 
 // app.get('/', (req,res) =>{
 //     res.send(req.oidc.isAuthenticated()? 'Logged in' : 'Logged out')

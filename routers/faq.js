@@ -6,9 +6,9 @@ const mongoose = require("mongoose");
 
 router.post("/", verifyTokenAndAdmin, async (req, res) => {
   try {
-    const { question, answer, listingNumber, status } = req.body;
+    const { question, answer, listingNumber, isActive } = req.body;
 
-    const newFaq = new Faq({ question, answer, listingNumber, status});
+    const newFaq = new Faq({ question, answer, listingNumber, isActive});
 
     const savedFaq = await newFaq.save();
     res.status(201).json(savedFaq);
@@ -68,7 +68,7 @@ router.get("/:id",verifyTokenAndAdmin, async (req, res) => {
   const faqId = req.params.id;
 
   if (!mongoose.isValidObjectId(faqId)) {
-    return res.status(400).send("Invalid fFaq ID");
+    return res.status(400).send("Invalid Faq ID");
   }
 
   try {
@@ -89,11 +89,11 @@ router.get("/active", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const faqs = await Faq.find({ isActive: true })
+    const faqs = await Faq.find({ isActive: true,isDeleted: false })
       .skip(skip)
       .limit(limit);
 
-    const totalFaqs = await Faq.countDocuments({ isActive: true });
+    const totalFaqs = await Faq.countDocuments({ isActive: true,isDeleted: false });
 
     res.status(200).json({
       faqs,

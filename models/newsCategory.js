@@ -24,6 +24,10 @@ const newsCategorySchema = mongoose.Schema({
     isDeleted: {
         type: Boolean,
         default: false,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
     }
 })
 
