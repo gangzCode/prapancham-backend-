@@ -57,6 +57,10 @@ const tributeItemSchema = mongoose.Schema({
         type: String,
         enum: ['message', 'card', 'letter','memory','flower'],
         required: true,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
     }
 })
 

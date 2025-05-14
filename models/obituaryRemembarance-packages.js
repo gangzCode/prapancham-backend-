@@ -45,7 +45,8 @@ const obituaryRemembarancePackagesSchema = mongoose.Schema({
         required: true,
     },
     duration: {
-        type: String,
+        type: Number,
+        min: 0,
         required: true,
     },
     description: {
@@ -81,10 +82,13 @@ const obituaryRemembarancePackagesSchema = mongoose.Schema({
         {
             country: {
                 type: String,
-                default: '',
                 required: true,
             },
-            countrySpecificPrice: {
+            currencyCode: {
+                type: String,
+                required: true,
+            },
+            price: {
                 type: Number,
                 min: 0,
                 required: true,
@@ -114,18 +118,22 @@ const obituaryRemembarancePackagesSchema = mongoose.Schema({
         min: 0,
         required: false,
     },
-    bgColors: {
+    bgColors: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ObituraryPostBgColor'
-    },
+    }],
     noofPrimaryImageBgFrames: {
         type: Number,
         min: 0,
         required: false,
     },
-    primaryImageBgFrames: {
+    primaryImageBgFrames:[ {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ObituraryPostPrimaryImageFrame'
+    }],
+    isActive: {
+        type: Boolean,
+        default: true,
     }
 })
 

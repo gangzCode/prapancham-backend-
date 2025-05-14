@@ -29,16 +29,23 @@ const addonsSchema = mongoose.Schema({
         {
             country: {
                 type: String,
-                default: '',
                 required: true,
             },
-            countrySpecificPrice: {
+            currencyCode: {
+                type: String,
+                required: true,
+            },
+            price: {
                 type: Number,
                 min: 0,
                 required: true,
             }, 
         }
     ],
+    isActive: {
+        type: Boolean,
+        default: true,
+    }
 })
 
 exports.Addons = mongoose.model('Addons', addonsSchema);

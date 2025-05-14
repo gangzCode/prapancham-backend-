@@ -10,6 +10,14 @@ const tributeLetterTemplateSchema = mongoose.Schema(
         type: Boolean,
         default: false,
     },
+    isActive: {
+        type: Boolean,
+        default: true,
+    },
+    name: {
+        type: String,
+        required: false,
+    }
   },
   { timestamps: true }
 );

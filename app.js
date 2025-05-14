@@ -40,6 +40,7 @@ const advertistmentRoutes = require("./routers/advertistment");
 const eventRoutes = require("./routers/event");
 const newsRoutes = require("./routers/news");
 const obituaryRemembarancePackagesRoutes = require("./routers/obituaryRemembarance-packages");
+const tributeItemsRoutes = require("./routers/tribute-items");
 
 const api = process.env.API_URL;
 
@@ -52,6 +53,7 @@ app.use(`${api}/advertistment`, advertistmentRoutes);
 app.use(`${api}/event`, eventRoutes);
 app.use(`${api}/news`, newsRoutes);
 app.use(`${api}/obituaryRemembarance-packages`, obituaryRemembarancePackagesRoutes);
+app.use(`${api}/tribute-items`, tributeItemsRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")
@@ -84,5 +86,6 @@ const connectToDB = async () => {
 
 // Connect to DB only once before handling requests
 connectToDB();
+
 
 module.exports = app;

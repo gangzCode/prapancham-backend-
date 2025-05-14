@@ -4,6 +4,14 @@ const obituraryPostBgColorSchema = mongoose.Schema({
     colorCode: {
         type: String,
         required: true,
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
     }
 })
 
