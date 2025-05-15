@@ -64,24 +64,6 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
-router.get("/:id",verifyTokenAndAdmin, async (req, res) => {
-  const faqId = req.params.id;
-
-  if (!mongoose.isValidObjectId(faqId)) {
-    return res.status(400).send("Invalid Faq ID");
-  }
-
-  try {
-    const faq = await Faq.findById(faqId);
-    if (!faq) {
-      return res.status(404).send("Faq not found");
-    }
-    res.status(200).send(faq);
-  } catch (error) {
-    res.status(500).send("Error retrieving the faq");
-  }
-});
-
 router.get("/active", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -107,6 +89,25 @@ router.get("/active", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+router.get("/:id",verifyTokenAndAdmin, async (req, res) => {
+  const faqId = req.params.id;
+
+  if (!mongoose.isValidObjectId(faqId)) {
+    return res.status(400).send("Invalid Faq ID");
+  }
+
+  try {
+    const faq = await Faq.findById(faqId);
+    if (!faq) {
+      return res.status(404).send("Faq not found");
+    }
+    res.status(200).send(faq);
+  } catch (error) {
+    res.status(500).send("Error retrieving the faq");
+  }
+});
+
 
 
 router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
