@@ -5,9 +5,9 @@ const { verifyTokenAndAdmin } = require("./verifyToken");
 
 router.post("/", async (req, res) => {
   try {
-    const { firstName,lastName,email,phoneNumber,country } = req.body;
+    const { firstName,lastName,email,phoneNumber,country,description } = req.body;
 
-    const newContactUsFormData = new ContactUsForm({ firstName, lastName,email,phoneNumber,country });
+    const newContactUsFormData = new ContactUsForm({ firstName, lastName,email,phoneNumber,country,description });
 
     const savedContactUsFormData= await newContactUsFormData.save();
     res.status(201).json(savedContactUsFormData);
