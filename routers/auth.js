@@ -4,6 +4,7 @@ const { AdminUser } = require("../models/adminUser");
 const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const { verifyTokenAndSuperAdmin } = require("./verifyToken");
+const mongoose = require("mongoose");
 
 //REGISTER
 router.post("/register", async (req, res) => {
@@ -54,6 +55,67 @@ router.post("/login", async (req, res) => {
     res.status(200).json({ ...others, accessToken });
   } catch (err) {
     return res.status(500).json(err);
+  }
+});
+
+router.get("/admin-user/all", verifyTokenAndSuperAdmin, async (req, res) => {
+  const page = parseInt(req.query.page) || 1;     
+  const limit = parseInt(req.query.limit) || 10;  
+  const skip = (page - 1) * limit;
+
+  try {
+    const adminUsers = await AdminUser.find({ isDeleted: false })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await AdminUser.countDocuments({ isDeleted: false });
+
+    res.status(200).json({
+      data: adminUsers,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/admin-user/:id",verifyTokenAndSuperAdmin, async (req, res) => {
+  const adminId = req.params.id;
+
+  if (!mongoose.isValidObjectId(adminId)) {
+    return res.status(400).send("Invalid admin id");
+  }
+
+  try {
+    const admin = await AdminUser.findById(adminId);
+    if (!admin) {
+      return res.status(404).send("Admin not found");
+    }
+    res.status(200).send(admin);
+  } catch (error) {
+    res.status(500).send("Error retrieving the admin");
+  }
+});
+
+router.delete("/admin-user/:id", verifyTokenAndSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin = await AdminUser.findByIdAndUpdate(
+      id,
+      { isDeleted: true }, 
+      { new: true }    
+    );
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    res.status(200).json("Admin marked as deleted");
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
