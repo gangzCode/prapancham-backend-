@@ -5,7 +5,6 @@ const mongoose = require("mongoose");
 const { verifyToken, verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./verifyToken");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
-const { Constants } = require("../models/constants");
 const fs = require("fs");
 const aws = require("aws-sdk");
 const uuid = require("uuid");
@@ -151,13 +150,15 @@ router.get("/active", async (req, res) => {
         .limit(limit)
         .sort({ createdAt: -1 });
   
-      const total = await Event.countDocuments({ isActive: true, isDeleted: false });
+      const totalEvents = await Event.countDocuments({ isActive: true, isDeleted: false });
   
       res.status(200).json({
-        data: events,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalEvents / limit),
+          totalItems: totalEvents,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -165,28 +166,29 @@ router.get("/active", async (req, res) => {
 });
 
 router.get("/all", verifyTokenAndAdmin, async (req, res) => {
-    const page = parseInt(req.query.page) || 1;     
-    const limit = parseInt(req.query.limit) || 10;  
-    const skip = (page - 1) * limit;
-  
     try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+  
       const events = await Event.find({ isDeleted: false })
         .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
+        .limit(limit);
   
-      const total = await Event.countDocuments({ isDeleted: false });
+      const totalEvents = await Event.countDocuments({ isDeleted: false });
   
       res.status(200).json({
-        data: events,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalEvents / limit),
+          totalItems: totalEvents,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
-});
+  });
 
 router.get("/:id", async (req, res) => {
     const eventId = req.params.id;

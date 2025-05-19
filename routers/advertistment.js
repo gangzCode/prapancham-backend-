@@ -116,10 +116,12 @@ router.get("/ad-type/active", verifyTokenAndAdmin, async (req, res) => {
       const total = await AdType.countDocuments({ isActive: true, isDeleted: false });
   
       res.status(200).json({
-        data: adTypes,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        adTypes,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -140,10 +142,12 @@ router.get("/ad-type/all", verifyTokenAndAdmin, async (req, res) => {
       const total = await AdType.countDocuments({ isDeleted: false });
   
       res.status(200).json({
-        data: adTypes,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        adTypes,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -269,10 +273,12 @@ router.get("/active", async (req, res) => {
       const total = await Advertistment.countDocuments({ isActive: true, isDeleted: false });
   
       res.status(200).json({
-        data: advertisements,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        advertisements,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -293,10 +299,12 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
       const total = await Advertistment.countDocuments({ isDeleted: false });
   
       res.status(200).json({
-        data: advertisements,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        advertisements,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });

@@ -127,10 +127,12 @@ router.get("/news-category/active", async (req, res) => {
     const total = await NewsCategory.countDocuments({ isActive: true, isDeleted: false });
 
     res.status(200).json({
-      data: newsCategory,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
+      newsCategory,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -151,10 +153,12 @@ router.get("/news-category/all", verifyTokenAndAdmin, async (req, res) => {
     const total = await NewsCategory.countDocuments({ isDeleted: false });
 
     res.status(200).json({
-      data: newsCategory,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
+      newsCategory,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -246,7 +250,6 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
-  
 router.post("/update", verifyTokenAndAdmin, async (req, res) => {
   try {
     await uploadAWS(req.body.newsId).fields([
@@ -280,10 +283,12 @@ router.get("/active", async (req, res) => {
       const total = await News.countDocuments({ isActive: true, isDeleted: false });
   
       res.status(200).json({
-        data: news,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        news,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -304,10 +309,12 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
       const total = await News.countDocuments({ isDeleted: false });
   
       res.status(200).json({
-        data: news,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
+        news,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
       });
     } catch (err) {
       res.status(500).json({ message: err.message });

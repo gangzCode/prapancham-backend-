@@ -72,10 +72,12 @@ router.get("/admin-user/all", verifyTokenAndSuperAdmin, async (req, res) => {
     const total = await AdminUser.countDocuments({ isDeleted: false });
 
     res.status(200).json({
-      data: adminUsers,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
+      adminUsers,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
