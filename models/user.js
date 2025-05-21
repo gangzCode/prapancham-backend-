@@ -31,8 +31,15 @@ const UserSchema = new mongoose.Schema(
     address: {
       type: String,
       required: false,
+    },
+    image: {
+      type: String,
+      default: ''
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     }
-
   },
   { timestamps: true }
 );

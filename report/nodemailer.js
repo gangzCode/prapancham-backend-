@@ -10,31 +10,35 @@ const RECEIVER_EMAIL = process.env.RECEIVER_EMAIL;
 const SENDER_PASSWORD = process.env.SENDER_PASSWORD;
 const CONTACT_US_RECEIVER_EMAIL = process.env.CONTACT_US_RECEIVER_EMAIL;
 
+const generate6DigitCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: 465,
-  secure: false, // Use `true` for port 465, `false` for all other ports
+  secure: true, // Use `true` for port 465, `false` for all other ports
   auth: {
     user: SENDER_EMAIL,
     pass: SENDER_PASSWORD,
   },
 });
 
-const sendMail = async () => {
-  const info = await transporter.sendMail({
-    from: SENDER_EMAIL, // sender address
-    to: RECEIVER_EMAIL, // list of receivers
-    subject: "Hello ✔", // Subject line
-    text: "Hello world?",
-  });
+const sendVerificationEmail = async (to, code) => {
+  const mailOptions = {
+    from: `"Prapancham" <${process.env.SENDER_EMAIL}>`,
+    to,
+    subject: "Your Verification Code",
+    html: `<p>Your verification code is <b>${code}</b>. It will expire in 5 minutes.</p>`,
+  };
+
+  await transporter.sendMail(mailOptions);
 };
 
 async function sendContactUsEmail(name, email, contact, message) {
   await transporter.sendMail({
-    from: SENDER_EMAIL,
-    to: CONTACT_US_RECEIVER_EMAIL,
-    subject: "Hello",
-    text: `NAME\t : ${name}\nEMAIL\t  : ${email}\nPHONE\t: ${contact}\n\nMESSAGE:\n${message}`,
+    from: `"YourApp" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: "Your Verification Code",
+    html: `<p>Your verification code is <b>${code}</b>. It will expire in 5 minutes.</p>`,
   });
 }
 
@@ -130,7 +134,8 @@ async function sendOrderUpdateEmail(orderId) {
 }
 
 module.exports = {
-  sendMail,
+  sendVerificationEmail,
+  generate6DigitCode,
   sendOrderPlacedEmail,
   sendContactUsEmail,
   sendOrderUpdateEmail,
