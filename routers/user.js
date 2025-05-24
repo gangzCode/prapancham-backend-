@@ -76,33 +76,53 @@ const uploadOptions = multer({ storage: storage });
 
 //REGISTER
 router.post("/register", async (req, res) => {
-  const newUser = new User({
-    username: req.body.username,
-    email: req.body.email,
-    password: CryptoJS.AES.encrypt(req.body.password, process.env.PASS_SEC).toString(),
-  });
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: "Username, email, and password are required" });
+  }
 
   try {
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(409).json({ message: "Username already taken" });
+    }
+
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+    });
+
     const savedUser = await newUser.save();
     return res.status(201).json(savedUser);
   } catch (err) {
-    return res.status(500).json(err);
+    console.error("Error registering user:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
+
 
 //LOGIN
 router.post("/login", async (req, res) => {
   try {
     const user = await User.findOne({ username: req.body.username });
+
     if (!user || user.isDeleted || !user.isActive) {
-      return res.status(401).json("Invalid username or password.");
+      return res.status(401).json({ message: "Invalid username or password." });
     }
 
-    const hashedPassword = CryptoJS.AES.decrypt(user.password, process.env.PASS_SEC);
-    const originalPassword = hashedPassword.toString(CryptoJS.enc.Utf8);
+    const isPasswordCorrect = await bcrypt.compare(req.body.password, user.password);
 
-    if (originalPassword !== req.body.password) {
-      return res.status(401).json("Invalid username or password.");
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ message: "Invalid username or password." });
     }
 
     const accessToken = jwt.sign(
@@ -112,9 +132,10 @@ router.post("/login", async (req, res) => {
     );
 
     const { password, ...others } = user._doc;
-    res.status(200).json({ ...others, accessToken });
+    return res.status(200).json({ ...others, accessToken });
   } catch (err) {
-    return res.status(500).json("Something went wrong. Try again.");
+    console.error("Login error:", err);
+    return res.status(500).json({ message: "Something went wrong. Try again." });
   }
 });
 
@@ -288,7 +309,7 @@ router.post("/forgot-password/reset", async (req, res) => {
   // Delete the verification code after use
   await ForgetPasswordCode.deleteMany({ email });
 
-  return res.status(200).json({ message: "Password reset successful" });
+  return res.status(200).json({ message: "Password reset successful",user});
 });
 
 
