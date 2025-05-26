@@ -127,7 +127,7 @@ router.post("/update", verifyTokenAndAdmin, async (req, res) => {
           return res.status(500).send("The country cannot be updated");
         }
   
-        res.send(event);
+        res.send(country);
       });
     } catch (e) {
       return res.status(500).send("The country cannot be updated");
@@ -223,7 +223,7 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
 });
   
 async function updateCountry(countryId, data, fileList) {
-    if (!data.name || !data.description) throw new Error("Name and description are required");
+    if (!data.name) throw new Error("Name is required");
 
     let name = data.name;
   
