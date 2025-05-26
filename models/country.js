@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const countrySchema = mongoose.Schema(
   {
-    question: {
+    name: {
       en: [
             {
                 name: { type: String, required: true },
