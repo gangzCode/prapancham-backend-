@@ -41,6 +41,7 @@ const eventRoutes = require("./routers/event");
 const newsRoutes = require("./routers/news");
 const obituaryRemembarancePackagesRoutes = require("./routers/obituaryRemembarance-packages");
 const tributeItemsRoutes = require("./routers/tribute-items");
+const countryRoutes = require("./routers/country");
 
 const api = process.env.API_URL;
 
@@ -54,6 +55,7 @@ app.use(`${api}/event`, eventRoutes);
 app.use(`${api}/news`, newsRoutes);
 app.use(`${api}/obituaryRemembarance-packages`, obituaryRemembarancePackagesRoutes);
 app.use(`${api}/tribute-items`, tributeItemsRoutes);
+app.use(`${api}/country`, countryRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")
