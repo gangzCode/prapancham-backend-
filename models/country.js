@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const faqSchema = mongoose.Schema(
+const countrySchema = mongoose.Schema(
   {
     question: {
       en: [
@@ -38,4 +38,4 @@ const faqSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-exports.Faq = mongoose.model("Faq", faqSchema);
+exports.Country = mongoose.model("Country", countrySchema);
