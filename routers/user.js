@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { User } = require("../models/user");
+const { PendingUser } = require("../models/pendingUser");
 const { ForgetPasswordCode } = require("../models/forgetPasswordCode");
 const CryptoJS = require("crypto-js");
 const bcrypt = require("bcryptjs");
@@ -8,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const { verifyTokenAndSuperAdmin } = require("./verifyToken");
 const mongoose = require("mongoose");
 const { verifyToken, verifyTokenAndAuthorization, verifyTokenAndAdmin } = require("./verifyToken");
-const { generate6DigitCode, sendVerificationEmail } = require("../report/nodemailer");
+const { generate6DigitCode, sendVerificationEmail,sendRegistrationVerificationEmail } = require("../report/nodemailer");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const fs = require("fs");
@@ -109,6 +110,114 @@ router.post("/register", async (req, res) => {
   }
 });
 
+router.post("/start-registration", async (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password)
+    return res.status(400).json({ message: "Username, email, and password are required." });
+
+  const passwordRegex = /^[a-zA-Z0-9]+$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({ message: "Password must be alphanumeric." });
+  }
+
+  try {
+    const existingRegisteredUser = await User.findOne({ email });
+    if (existingRegisteredUser) {
+      return res.status(409).json({ message: "Email already registered." });
+    }
+
+    await PendingUser.deleteMany({ email });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = generate6DigitCode();
+
+    const pendingUser = new PendingUser({
+      username,
+      email,
+      hashedPassword,
+      otp,
+    });
+
+    await pendingUser.save();
+
+    await sendRegistrationVerificationEmail(email, otp);
+
+    return res.status(200).json({ message: "OTP sent to email. Please verify to complete registration." });
+  } catch (err) {
+    console.error("Error during start registration:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/resend-code", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) return res.status(400).json({ message: "Email is required." });
+
+  const pendingUser = await PendingUser.findOne({ email });
+  if (!pendingUser) {
+    return res.status(404).json({ message: "No pending registration found for this email." });
+  }
+
+  const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  pendingUser.otp = newOtp;
+  pendingUser.createdAt = new Date(); // Reset expiry timer (5 mins TTL will be re-triggered)
+  await pendingUser.save();
+
+  await sendRegistrationVerificationEmail(email, newOtp);
+
+  return res.status(200).json({ message: "Verification code resent" });
+});
+
+router.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+
+  const pendingUser = await PendingUser.findOne({ email });
+
+  if (!pendingUser) {
+    return res.status(400).json({ message: "No pending registration found for this email" });
+  }
+
+  if (pendingUser.verified) {
+    return res.status(400).json({ message: "Email already verified" });
+  }
+
+  if (pendingUser.otp !== otp) {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+
+  if (pendingUser.expiresAt < Date.now()) {
+    return res.status(400).json({ message: "OTP expired" });
+  }
+
+  pendingUser.verified = true;
+  await pendingUser.save();
+
+  return res.status(200).json({ message: "OTP verified, you can now complete registration" });
+});
+
+router.post("/complete-registration", async (req, res) => {
+  const { email } = req.body;
+
+  const pendingUser = await PendingUser.findOne({ email });
+
+  if (!pendingUser || !pendingUser.verified) {
+    return res.status(400).json({ message: "Email not verified or not found" });
+  }
+
+  const user = new User({
+    username: pendingUser.username,
+    email: pendingUser.email,
+    password: pendingUser.hashedPassword,
+  });
+
+  await user.save();
+  await PendingUser.deleteOne({ email });
+
+  return res.status(201).json({ message: "User registered successfully" });
+});
 
 //LOGIN
 router.post("/login", async (req, res) => {
@@ -232,6 +341,25 @@ router.get("/:id",verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
+router.delete("/:id", verifyTokenAndSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin = await User.findByIdAndUpdate(
+      id,
+      { isDeleted: true }, 
+      { new: true }    
+    );
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    res.status(200).json("User marked as deleted");
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.post("/forgot-password/send-code", async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -311,7 +439,6 @@ router.post("/forgot-password/reset", async (req, res) => {
 
   return res.status(200).json({ message: "Password reset successful",user});
 });
-
 
 //FUNCTIONS
 async function updateUser(userId,body,fileList) { 

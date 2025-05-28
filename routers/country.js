@@ -88,6 +88,15 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
         }
   
         req.body = sanitizeBodyKeys(req.body);
+
+        if (typeof req.body.name === 'string') {
+            try {
+              req.body.name = JSON.parse(req.body.name);
+            } catch (parseError) {
+              await Country.findByIdAndDelete(countryId);
+              return res.status(400).send("Invalid JSON in 'name' field");
+            }
+          }
   
         try {
           const updatedCountry = await updateCountry(countryId, req.body, req.files);
@@ -120,6 +129,17 @@ router.post("/update", verifyTokenAndAdmin, async (req, res) => {
       ])(req, res, async (err) => {
         if (err) {
           return res.status(500).send("The country cannot be updated");
+        }
+
+        req.body = sanitizeBodyKeys(req.body);
+
+
+        if (typeof req.body.name === 'string') {
+            try {
+              req.body.name = JSON.parse(req.body.name);
+            } catch (parseError) {
+              return res.status(400).send("Invalid JSON in 'name' field");
+            }
         }
   
         const country = await updateCountry(req.body.countryId, req.body, req.files);
@@ -216,7 +236,7 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
         return res.status(404).json({ message: "Country not found" });
       }
   
-      res.status(200).json("Event marked as deleted");
+      res.status(200).json("Country marked as deleted");
     } catch (err) {
       res.status(500).json({ message: err.message });
     }

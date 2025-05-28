@@ -33,6 +33,17 @@ const sendVerificationEmail = async (to, code) => {
   await transporter.sendMail(mailOptions);
 };
 
+const sendRegistrationVerificationEmail = async (to, code) => {
+  const mailOptions = {
+    from: `"Prapancham" <${process.env.SENDER_EMAIL}>`,
+    to,
+    subject: "Your Registration Verification Code",
+    html: `<p>Your verification code is <b>${code}</b>. It will expire in 5 minutes.</p>`,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 async function sendContactUsEmail(name, email, contact, message) {
   await transporter.sendMail({
     from: `"YourApp" <${process.env.EMAIL_USER}>`,
@@ -139,4 +150,5 @@ module.exports = {
   sendOrderPlacedEmail,
   sendContactUsEmail,
   sendOrderUpdateEmail,
+  sendRegistrationVerificationEmail
 };
