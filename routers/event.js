@@ -165,6 +165,92 @@ router.get("/active", async (req, res) => {
     }
 });
 
+router.get("/featured", async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+  
+    try {
+      const events = await Event.find({ isFeatured: true, isDeleted: false })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+  
+      const totalEvents = await Event.countDocuments({ isFeatured: true, isDeleted: false });
+  
+      res.status(200).json({
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalEvents / limit),
+          totalItems: totalEvents,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+router.get("/filter", async (req, res) => {
+    try {
+      const { day, month, year } = req.query;
+  
+      if (!year && !month && !day) {
+        return res.status(400).json({ message: "Please provide at least one of year, month, or day" });
+      }
+  
+      let regexPattern = "^";
+  
+      if (year) {
+        regexPattern += `${year}`;
+      } else {
+        regexPattern += "\\d{4}";
+      }
+  
+      if (month) {
+        regexPattern += `-${month.padStart(2, "0")}`;
+      } else {
+        regexPattern += "-\\d{2}";
+      }
+  
+      if (day) {
+        regexPattern += `-${day.padStart(2, "0")}`;
+      }
+  
+      const events = await Event.find({
+        eventDate: { $regex: regexPattern },
+        isDeleted: false,
+      });
+  
+      if (!events || events.length === 0) {
+        return res.status(404).json({ message: "No events found for the specified date." });
+      }
+  
+      res.status(200).json(events);
+    } catch (err) {
+      console.error("Error filtering events:", err);
+      res.status(500).json({ message: "Server Error" });
+    }
+});
+
+router.get("/recent/:limit", async (req, res) => {
+    const limit = parseInt(req.params.limit) || 5;
+  
+    try {
+      const recentEvents = await Event.find({
+        isActive: true,
+        isDeleted: false,
+      })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+  
+      res.status(200).json(recentEvents);
+    } catch (err) {
+      console.error("Error fetching recent events:", err);
+      res.status(500).json({ message: "Server Error" });
+    }
+});
+ 
 router.get("/all", verifyTokenAndAdmin, async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
@@ -188,7 +274,7 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
-  });
+});
 
 router.get("/:id", async (req, res) => {
     const eventId = req.params.id;
