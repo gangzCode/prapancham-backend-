@@ -18,6 +18,11 @@ const advertistmentSchema = mongoose.Schema({
         ref: 'AdType',
         required: true,
     },
+    adCategory: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AdCategory',
+        required: true,
+    },
     adPageName: {
         type: String,
         enum: ['home', 'contact', 'events','news','obituary','create-memorial'],

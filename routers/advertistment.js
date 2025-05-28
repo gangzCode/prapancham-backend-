@@ -1,5 +1,6 @@
 const { Advertistment } = require("../models/advertistment");
 const { AdType } = require("../models/adType");
+const { AdCategory } = require("../models/adCategory");
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
@@ -70,9 +71,9 @@ const uploadOptions = multer({ storage: storage });
 
 router.post("/ad-type", verifyTokenAndAdmin, async (req, res) => {
     try {
-      const { imageSize, type, status } = req.body;
+      const { imageSize, type, isActive } = req.body;
   
-      const newAdType = new AdType({ imageSize, type, status});
+      const newAdType = new AdType({ imageSize, type, isActive});
   
       const savedAdType = await newAdType.save();
       res.status(201).json(savedAdType);
@@ -155,14 +156,14 @@ router.get("/ad-type/all", verifyTokenAndAdmin, async (req, res) => {
 });
   
 router.get("/ad-type/:id",verifyTokenAndAdmin, async (req, res) => {
-    const adId = req.params.id;
+    const adTypeId = req.params.id;
   
-    if (!mongoose.isValidObjectId(adId)) {
+    if (!mongoose.isValidObjectId(adTypeId)) {
       return res.status(400).send("Invalid Ad Type ID");
     }
   
     try {
-      const adType = await AdType.findById(adId);
+      const adType = await AdType.findById(adTypeId);
       if (!adType) {
         return res.status(404).send("Ad Type not found");
       }
@@ -191,6 +192,133 @@ router.delete("/ad-type/:id", verifyTokenAndAdmin, async (req, res) => {
     }
 });
 
+//Ad Category APIS
+
+router.post("/ad-category", verifyTokenAndAdmin, async (req, res) => {
+    try {
+      const { name, type, isActive } = req.body;
+  
+      const newAdCategory = new AdCategory({ name, type, isActive});
+  
+      const savedAdCategory = await newAdCategory.save();
+      res.status(201).json(savedAdCategory);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+router.put("/ad-category/:id",verifyTokenAndAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, type, isActive } = req.body;
+  
+      const updatedAdCategory = await AdCategory.findByIdAndUpdate(
+        id,
+        { name, type, isActive },
+        { new: true, runValidators: true }
+      );
+  
+      if (!updatedAdCategory) {
+        return res.status(404).json({ message: "Ad Category not found" });
+      }
+  
+      res.status(200).json(updatedAdCategory);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+router.get("/ad-category/active", async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+  
+    try {
+      const adCategory = await AdCategory.find({ isActive: true, isDeleted: false })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+  
+      const total = await AdCategory.countDocuments({ isActive: true, isDeleted: false });
+  
+      res.status(200).json({
+        adCategory,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+  
+router.get("/ad-category/all", verifyTokenAndAdmin, async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+  
+    try {
+      const adCategory = await AdCategory.find({ isDeleted: false })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+  
+      const total = await AdCategory.countDocuments({ isDeleted: false });
+  
+      res.status(200).json({
+        adCategory,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+  
+router.get("/ad-category/:id", async (req, res) => {
+    const adCategoryId = req.params.id;
+  
+    if (!mongoose.isValidObjectId(adCategoryId)) {
+      return res.status(400).send("Invalid Ad Category ID");
+    }
+  
+    try {
+      const adCategory = await AdCategory.findById(adCategoryId);
+      if (!adCategory) {
+        return res.status(404).send("Ad Category not found");
+      }
+      res.status(200).send(adCategory);
+    } catch (error) {
+      res.status(500).send("Error retrieving the Ad Category");
+    }
+});
+
+router.delete("/ad-category/:id", verifyTokenAndAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const adCategory = await AdCategory.findByIdAndUpdate(
+        id,
+        { isDeleted: true,isActive: false  }, 
+        { new: true }    
+      );
+  
+      if (!adCategory) {
+        return res.status(404).json({ message: "Ad Category not found" });
+      }
+  
+      res.status(200).json("Ad Category marked as deleted");
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+//Advertistment APIS
+
 router.post("/", verifyTokenAndAdmin, async (req, res) => {
     let adId;
   
@@ -199,6 +327,7 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
       let ad = new Advertistment({
         image: "TEMP",
         adType: "TEMP",
+        adCategory: "TEMP",
         adPageName:"TEMP",
         expiryDate: "TEMP",
       });
@@ -311,6 +440,116 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
     }
 });
 
+router.get('/ad-categories-with-count', async (req, res) => {
+    try {
+      const categoriesWithCounts = await AdCategory.aggregate([
+        {
+          $match: {
+            isDeleted: false,
+            isActive: true
+          }
+        },
+        {
+          $lookup: {
+            from: 'advertistments', // MongoDB collection name (plural lowercase)
+            localField: '_id',
+            foreignField: 'adCategory',
+            as: 'ads'
+          }
+        },
+        {
+          $addFields: {
+            adCount: {
+              $size: {
+                $filter: {
+                  input: "$ads",
+                  as: "ad",
+                  cond: { $and: [
+                    { $eq: ["$$ad.isDeleted", false] },
+                    { $eq: ["$$ad.isActive", true] }
+                  ]}
+                }
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            name: 1,
+            adCount: 1
+          }
+        }
+      ]);
+  
+      res.json(categoriesWithCounts);
+    } catch (error) {
+      console.error("Error fetching ad categories with count:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.get("/by-ad-type-ad-page", async (req, res) => {
+    try {
+      const { adType, adPageName } = req.query;
+  
+      if (!adType || !adPageName) {
+        return res.status(400).json({ message: "adType and adPageName are required" });
+      }
+  
+      const ads = await Advertistment.find({
+        adType,
+        adPageName,
+        isDeleted: false,
+        isActive: true,
+      }).populate("adType").populate("adCategory");
+  
+      res.status(200).json(ads);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+router.get("/by-category", async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const { adCategory } = req.query;
+  
+    if (!adCategory) {
+      return res.status(400).json({ message: "adCategory is required" });
+    }
+  
+    try {
+      const advertisements = await Advertistment.find({
+        adCategory,
+        isDeleted: false,
+        isActive: true,
+      })
+        .populate("adType")
+        .populate("adCategory")
+        .skip(skip)
+        .limit(limit)
+        .sort({ uploadedDate: -1 }); // or use `createdAt` if you have timestamps enabled
+  
+      const total = await Advertistment.countDocuments({
+        adCategory,
+        isDeleted: false,
+        isActive: true,
+      });
+  
+      res.status(200).json({
+        advertisements,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+  
 router.get("/:id", async (req, res) => {
     const adId = req.params.id;
   
@@ -347,19 +586,24 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
       res.status(500).json({ message: err.message });
     }
 });
+
   
 async function updateAdvertisement(adId, data, fileList) {
     if (!data.adType) throw new Error("Ad type is required");
+    if (!data.adCategory) throw new Error("Ad category is required");
     if (!data.expiryDate) throw new Error("Expiry date is required");    
     if (!data.adPageName) throw new Error("Ad page name is required");
 
-    // Validate adType reference exists
     const adTypeExists = await AdType.findById(data.adType);
-    if (!adTypeExists) throw new Error("Invalid adType");
+    if (!adTypeExists) throw new Error("Invalid ad type");
+
+    const adCategoryExists = await AdCategory.findById(data.adCategory);
+    if (!adCategoryExists) throw new Error("Invalid ad category");
   
     const updateData = {
       link: data.link || '',
       adType: data.adType,
+      adCategory: data.adCategory,
       adPageName: data.adPageName || null,
       isDeleted: false,
       isActive: true,
