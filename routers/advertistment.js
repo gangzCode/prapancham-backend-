@@ -392,14 +392,35 @@ router.get("/active", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const { adCategory } = req.query;
   
     try {
-      const advertisements = await Advertistment.find({ isActive: true, isDeleted: false })
+      const filter = {
+        isActive: true,
+        isDeleted: false,
+      };
+  
+      if (adCategory) {
+        if (!mongoose.Types.ObjectId.isValid(adCategory)) {
+          return res.status(400).json({ message: "Invalid ad category ID format" });
+        }
+  
+        const categoryExists = await AdCategory.findById(adCategory);
+        if (!categoryExists) {
+          return res.status(404).json({ message: "ad category not found" });
+        }
+  
+        filter.adCategory = adCategory;
+      }
+  
+      const advertisements = await Advertistment.find(filter)
+        .populate("adType")
+        .populate("adCategory")
         .skip(skip)
         .limit(limit)
         .sort({ uploadedDate: -1 });
   
-      const total = await Advertistment.countDocuments({ isActive: true, isDeleted: false });
+      const total = await Advertistment.countDocuments(filter);
   
       res.status(200).json({
         advertisements,
@@ -412,7 +433,7 @@ router.get("/active", async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
-});
+  });
 
 router.get("/all", verifyTokenAndAdmin, async (req, res) => {
     const page = parseInt(req.query.page) || 1;     
