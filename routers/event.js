@@ -144,13 +144,44 @@ router.get("/active", async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
   
+    const { day, month, year } = req.query;
+  
     try {
-      const events = await Event.find({ isActive: true, isDeleted: false })
+      const baseFilter = { isActive: true, isDeleted: false };
+  
+      // Optional date filtering
+      if (year || month || day) {
+        let regexPattern = "^";
+  
+        if (year) {
+          regexPattern += `${year}`;
+        } else {
+          regexPattern += "\\d{4}";
+        }
+  
+        if (month) {
+          regexPattern += `-${month.padStart(2, "0")}`;
+        } else {
+          regexPattern += "-\\d{2}";
+        }
+  
+        if (day) {
+          regexPattern += `-${day.padStart(2, "0")}`;
+        }
+  
+        baseFilter.eventDate = { $regex: regexPattern };
+      }
+  
+      const events = await Event.find(baseFilter)
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 });
+        .sort({ uploadedDate: -1 });
   
-      const totalEvents = await Event.countDocuments({ isActive: true, isDeleted: false });
+      const totalEvents = await Event.countDocuments(baseFilter);
+  
+      if (!events || events.length === 0) {
+        return res.status(404).json({ message: "No events found for the specified criteria." });
+      }
   
       res.status(200).json({
         events,
@@ -161,9 +192,10 @@ router.get("/active", async (req, res) => {
         },
       });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      console.error("Error fetching active events:", err);
+      res.status(500).json({ message: "Server Error" });
     }
-});
+});  
 
 router.get("/featured", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
