@@ -397,7 +397,7 @@ router.get("/active", async (req, res) => {
       const advertisements = await Advertistment.find({ isActive: true, isDeleted: false })
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 });
+        .sort({ uploadedDate: -1 });
   
       const total = await Advertistment.countDocuments({ isActive: true, isDeleted: false });
   
@@ -423,7 +423,7 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
       const advertisements = await Advertistment.find({ isDeleted: false })
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 });
+        .sort({ uploadedDate: -1 });
   
       const total = await Advertistment.countDocuments({ isDeleted: false });
   
@@ -529,7 +529,7 @@ router.get("/by-category", async (req, res) => {
         .populate("adCategory")
         .skip(skip)
         .limit(limit)
-        .sort({ uploadedDate: -1 }); // or use `createdAt` if you have timestamps enabled
+        .sort({ uploadedDate: -1 });
   
       const total = await Advertistment.countDocuments({
         adCategory,

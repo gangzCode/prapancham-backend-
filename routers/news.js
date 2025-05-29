@@ -295,6 +295,92 @@ router.get("/active", async (req, res) => {
     }
 });
 
+router.get("/breaking-news/:limit", async (req, res) => {
+  const limit = parseInt(req.params.limit) || 5;
+
+  try {
+    const breakingNews = await News.find({
+      isActive: true,
+      isDeleted: false,
+      isBreakingNews: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json(breakingNews);
+  } catch (err) {
+    console.error("Error fetching breaking news:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+router.get("/important-news/:limit", async (req, res) => {
+  const limit = parseInt(req.params.limit) || 5;
+
+  try {
+    const importantNews = await News.find({
+      isActive: true,
+      isDeleted: false,
+      isImportantNews: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json(importantNews);
+  } catch (err) {
+    console.error("Error fetching important news:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+router.get("/recent/:limit", async (req, res) => {
+  const limit = parseInt(req.params.limit) || 5;
+
+  try {
+    const recentNews = await News.find({
+      isActive: true,
+      isDeleted: false,
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.status(200).json(recentNews);
+  } catch (err) {
+    console.error("Error fetching recent news:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+router.get("/grouped-by-category", async (req, res) => {
+  try {
+    const categories = await NewsCategory.find({ isDeleted: false, isActive: true });
+
+    const result = [];
+
+    for (const category of categories) {
+      const newsItems = await News.find({
+        newsCategory: category._id,
+        isDeleted: false,
+        isActive: true,
+      })
+        .sort({ createdAt: -1 })
+        .limit(3);
+
+      if (newsItems.length > 0) {
+        result.push({
+          category,
+          news: newsItems,
+        });
+      }
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Error fetching grouped news:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
 router.get("/all", verifyTokenAndAdmin, async (req, res) => {
     const page = parseInt(req.query.page) || 1;     
     const limit = parseInt(req.query.limit) || 10;  
@@ -334,30 +420,6 @@ router.get("/by-category/:categoryId", async (req, res) => {
       .sort({ createdAt: -1 });
 
     const total = await News.countDocuments({ isDeleted: false, newsCategory: categoryId });
-
-    res.status(200).json({
-      data: news,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-router.get("/active", verifyTokenAndAdmin, async (req, res) => {
-  const page = parseInt(req.query.page) || 1;     
-  const limit = parseInt(req.query.limit) || 10;  
-  const skip = (page - 1) * limit;
-
-  try {
-    const news = await News.find({ isActive: true })
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-
-    const total = await News.countDocuments({ isActive: true });
 
     res.status(200).json({
       data: news,

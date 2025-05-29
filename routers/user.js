@@ -280,7 +280,8 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
 
     const user = await User.find({ isDeleted: false })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
     const totalUsers = await User.countDocuments({ isDeleted: false });
 
@@ -306,7 +307,8 @@ router.get("/active",verifyTokenAndAdmin, async (req, res) => {
 
     const user = await User.find({ isActive: true,isDeleted: false })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
     const totalUsers = await User.countDocuments({ isActive: true,isDeleted: false });
 

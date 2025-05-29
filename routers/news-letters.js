@@ -58,7 +58,8 @@ router.get("/", verifyTokenAndAdmin, async (req, res) => {
 
     const newsletter = await NewsLetter.find({ isDeleted: false })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
     const totalNewsLetter = await NewsLetter.countDocuments({ isDeleted: false });
 

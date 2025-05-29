@@ -259,7 +259,8 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
   
       const events = await Event.find({ isDeleted: false })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .sort({ createdAt: -1 });
   
       const totalEvents = await Event.countDocuments({ isDeleted: false });
   

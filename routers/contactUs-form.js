@@ -25,7 +25,8 @@ router.get("/", verifyTokenAndAdmin, async (req, res) => {
 
     const contactUsForm = await ContactUsForm.find({ isDeleted: false })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
     const totalContactUsForm = await ContactUsForm.countDocuments({ isDeleted: false });
 
