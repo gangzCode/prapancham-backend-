@@ -50,10 +50,6 @@ const newsSchema = mongoose.Schema(
         type: String,
         default: ''
     },
-    thumbnailImage: {
-        type: String,
-        default: ''
-    },
     isDeleted: {
         type: Boolean,
         default: false,
