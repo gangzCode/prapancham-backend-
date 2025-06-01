@@ -627,7 +627,7 @@ async function updateAdvertisement(adId, data, fileList) {
       adCategory: data.adCategory,
       adPageName: data.adPageName || null,
       isDeleted: false,
-      isActive: true,
+      isActive: data.isActive !== undefined ? data.isActive : true,
       expiryDate: new Date(data.expiryDate),
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
     };
