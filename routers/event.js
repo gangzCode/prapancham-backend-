@@ -370,7 +370,7 @@ async function updateEvent(eventId, data, fileList) {
       eventLink: data.eventLink || '',
       registeredPeopleCount: data.registeredPeopleCount || '0',
       isFeatured: data.isFeatured || false,
-      isActive: true,
+      isActive: data.isActive !== undefined ? data.isActive : true,
       isDeleted: false,
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
       ...(fileList?.featuredEventImage?.[0] && { featuredEventImage: fileList.featuredEventImage[0].location }),
