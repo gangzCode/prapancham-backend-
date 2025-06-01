@@ -446,7 +446,7 @@ router.post("/forgot-password/reset", async (req, res) => {
 async function updateUser(userId,body,fileList) { 
   const updateData = {
     isDeleted: false,
-    isActive: true,
+    isActive: body.isActive !== undefined ? body.isActive : true,
     username:body.username,
     phone: body.phone,
     country: body.country,

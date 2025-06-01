@@ -539,10 +539,9 @@ router.delete("/flower-type/:id", verifyTokenAndAdmin, async (req, res) => {
 async function updateCardTemplate(cardTemplateId,body,fileList) { 
     const updateData = {
       isDeleted: false,
-      isActive: true,
+      isActive: body.isActive !== undefined ? body.isActive : true,
       name:body.name,
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
-      ...body
     };
   
     const updatedTributeCardTemplate = await TributeCardTemplate.findByIdAndUpdate(cardTemplateId, updateData, { new: true });
@@ -556,7 +555,6 @@ async function updateLetterTemplate(letterTemplateId,body,fileList) {
       isActive: true,
       name:body.name,
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
-      ...body
     };
   
     const updatedTributeLetterTemplate = await TributeLetterTemplate.findByIdAndUpdate(letterTemplateId, updateData, { new: true });

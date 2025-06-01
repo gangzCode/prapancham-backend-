@@ -508,7 +508,7 @@ async function updateNews(newsId, data, fileList) {
     paragraphs: Array.isArray(paragraphs) ? paragraphs : [],
     isBreakingNews: data.isBreakingNews || false,
     isImportantNews: data.isImportantNews || false,
-    isActive: true,
+    isActive: data.isActive !== undefined ? data.isActive : true,
     isDeleted: false,
     newsCategory: newsCategoryId,
     ...(fileList?.thumbnailImage?.[0] && { thumbnailImage: fileList.thumbnailImage[0].location }),
