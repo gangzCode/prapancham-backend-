@@ -250,7 +250,7 @@ async function updateCountry(countryId, data, fileList) {
   
     const updateData = {
       name,
-      isActive: true,
+      isActive: data.isActive !== undefined ? data.isActive : true,
       isDeleted: false,
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
     };
