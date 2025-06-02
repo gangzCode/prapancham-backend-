@@ -361,11 +361,6 @@ async function updateEvent(eventId, data, fileList) {
 
     if (!data.eventDate) throw new Error("Event date is required");
     if (!data.expiryDate) throw new Error("Expiry date is required");
-
-    const image = fileList?.image?.[0] ? fileList.image[0].location : (data.image && data.image.trim() !== '' ? data.image : existingEvent.image);
-
-    const featuredEventImage = fileList?.featuredEventImage?.[0]? fileList.featuredEventImage[0].location : (data.featuredEventImage && data.featuredEventImage.trim() !== '' ? data.featuredEventImage : existingEvent.featuredEventImage);
-
   
     const updateData = {
       name,
@@ -377,8 +372,10 @@ async function updateEvent(eventId, data, fileList) {
       isFeatured: data.isFeatured || false,
       isActive: data.isActive !== undefined ? data.isActive : true,
       isDeleted: false,
-      image,
-      featuredEventImage,
+      ...(fileList && fileList.image && fileList.image[0] && { image: fileList.image[0].location }),
+      ...(fileList &&
+        fileList.featuredEventImage &&
+        fileList.featuredEventImage[0] && { featuredEventImage: fileList.featuredEventImage[0].location }),
     };
   
     const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, { new: true });
