@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const obituraryPostBgColorSchema = mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+    },
     colorCode: {
         type: String,
         required: true,
