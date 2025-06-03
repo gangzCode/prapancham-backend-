@@ -71,9 +71,9 @@ const uploadAWS = (adId) =>
 
 router.post("/bg-color", verifyTokenAndAdmin, async (req, res) => {
   try {
-    const { colorCode, isActive } = req.body;
+    const { name,colorCode, isActive } = req.body;
 
-    const newBgColor = new ObituraryPostBgColor({ colorCode, isActive});
+    const newBgColor = new ObituraryPostBgColor({ name,colorCode, isActive});
 
     const savedBgColor = await newBgColor.save();
     res.status(201).json(savedBgColor);
@@ -85,11 +85,11 @@ router.post("/bg-color", verifyTokenAndAdmin, async (req, res) => {
 router.put("/bg-color/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { colorCode, isActive } = req.body;
+    const { name,colorCode, isActive } = req.body;
 
     const updatedBgColor = await ObituraryPostBgColor.findByIdAndUpdate(
       id,
-      {colorCode, isActive},
+      {name,colorCode, isActive},
       { new: true, runValidators: true }
     );
 
