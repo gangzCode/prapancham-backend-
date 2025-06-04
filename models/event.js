@@ -81,11 +81,7 @@ const eventSchema = mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
-    },
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
+    }
   },
   { timestamps: true }
 );
