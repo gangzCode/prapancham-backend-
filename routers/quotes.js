@@ -268,7 +268,7 @@ async function updateQuote(quoteId, data, fileList) {
       ...(fileList && fileList.image && fileList.image[0] && { image: fileList.image[0].location }),
     };
   
-    const updatedQuote = await Event.findByIdAndUpdate(quoteId, updateData, { new: true });
+    const updatedQuote = await Quotes.findByIdAndUpdate(quoteId, updateData, { new: true });
     return updatedQuote;
 }
   
