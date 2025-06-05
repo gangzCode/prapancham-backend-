@@ -74,7 +74,6 @@ router.get("/active", async (req, res) => {
     const faqs = await Faq.find({ isActive: true,isDeleted: false })
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 });
 
     const totalFaqs = await Faq.countDocuments({ isActive: true,isDeleted: false });
 
