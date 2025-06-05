@@ -1,5 +1,6 @@
 const { News } = require("../models/news");
 const { NewsCategory } = require("../models/newsCategory");
+const { YouTubeNews } = require("../models/youtubeNews");
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
