@@ -172,30 +172,45 @@ router.post("/resend-code", async (req, res) => {
 });
 
 router.post("/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
+  try {
+    const { email, otp } = req.body;
 
-  const pendingUser = await PendingUser.findOne({ email });
+    const pendingUser = await PendingUser.findOne({ email });
 
-  if (!pendingUser) {
-    return res.status(400).json({ message: "No pending registration found for this email" });
+    if (!pendingUser) {
+      return res.status(400).json({ message: "No pending registration found for this email" });
+    }
+
+    if (pendingUser.verified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    if (pendingUser.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (pendingUser.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    pendingUser.verified = true;
+    await pendingUser.save();
+
+    // Complete registration
+    const user = new User({
+      username: pendingUser.username,
+      email: pendingUser.email,
+      password: pendingUser.hashedPassword,
+    });
+
+    await user.save();
+    await PendingUser.deleteOne({ email });
+
+    return res.status(201).json({ message: "OTP verified and user registered successfully" });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
-
-  if (pendingUser.verified) {
-    return res.status(400).json({ message: "Email already verified" });
-  }
-
-  if (pendingUser.otp !== otp) {
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
-
-  if (pendingUser.expiresAt < Date.now()) {
-    return res.status(400).json({ message: "OTP expired" });
-  }
-
-  pendingUser.verified = true;
-  await pendingUser.save();
-
-  return res.status(200).json({ message: "OTP verified, you can now complete registration" });
 });
 
 router.post("/complete-registration", async (req, res) => {
