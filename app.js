@@ -43,6 +43,7 @@ const obituaryRemembarancePackagesRoutes = require("./routers/obituaryRemembaran
 const tributeItemsRoutes = require("./routers/tribute-items");
 const countryRoutes = require("./routers/country");
 const quotesRoutes = require("./routers/quotes");
+const youtubeNewsRoutes = require("./routers/youtubeNews");
 
 const api = process.env.API_URL;
 
@@ -58,6 +59,7 @@ app.use(`${api}/obituaryRemembarance-packages`, obituaryRemembarancePackagesRout
 app.use(`${api}/tribute-items`, tributeItemsRoutes);
 app.use(`${api}/country`, countryRoutes);
 app.use(`${api}/quotes`, quotesRoutes);
+app.use(`${api}/youtube-news`, youtubeNewsRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")
@@ -90,4 +92,6 @@ const connectToDB = async () => {
 
 // Connect to DB only once before handling requests
 connectToDB();
+
+
 module.exports = app;
