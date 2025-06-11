@@ -481,8 +481,12 @@ router.post('/', verifyTokenAndAdmin, async (req, res) => {
       addons,
       isObituary,
       isRemembarace,
+      isSlideShow,
+      isPriority,
+      isFeatured,
+      isSocialSharing,
       isPremium,
-      price,
+      basePrice,
       duration,
       description,
       wordLimit,
@@ -552,8 +556,12 @@ router.post('/', verifyTokenAndAdmin, async (req, res) => {
       addons: uniqueAddons,
       isObituary,
       isRemembarace,
+      isPriority,
+      isFeatured,
+      isSocialSharing,
+      isSlideShow,
       isPremium,
-      price,
+      basePrice,
       duration,
       description,
       wordLimit,
@@ -586,8 +594,12 @@ router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
       addons,
       isObituary,
       isRemembarace,
+      isPriority,
+      isFeatured,
+      isSocialSharing,
+      isSlideShow,
       isPremium,
-      price,
+      basePrice,
       duration,
       description,
       wordLimit,
@@ -652,7 +664,6 @@ router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: "One or more primary image frames are invalid." });
     }
 
-    // ✅ Update the package
     const updatedPackage = await ObituaryRemembarancePackages.findByIdAndUpdate(
       id,
       {
@@ -660,8 +671,12 @@ router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
         addons: uniqueAddons,
         isObituary,
         isRemembarace,
+        isPriority,
+        isFeatured,
+        isSlideShow,
+        isSocialSharing,
         isPremium,
-        price,
+        basePrice,
         duration,
         description,
         wordLimit,
@@ -699,6 +714,8 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const obituaryRemembarancePackages = await ObituaryRemembarancePackages.find({ isDeleted: false })
+      .populate('basePrice.country', 'currencyCode name')
+      .populate('priceList.country', 'currencyCode name')    
       .skip(skip)
       .limit(limit);
 
@@ -724,10 +741,15 @@ router.get("/active", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const obituaryRemembarancePackages = await ObituaryRemembarancePackages.find({ isActive: true,isDeleted: false })
+    const obituaryRemembarancePackages = await ObituaryRemembarancePackages.find({ isActive: true, isDeleted: false })
+      .populate({ path: 'basePrice.country', select: 'name currencyCode' })
+      .populate({ path: 'priceList.country', select: 'name currencyCode' })    
+      .populate('addons')                                       
+      .populate('bgColors')                                      
+      .populate('primaryImageBgFrames')  
       .skip(skip)
       .limit(limit);
-
+  
     const totalObituaryRemembarancePackages = await ObituaryRemembarancePackages.countDocuments({ isActive: true,isDeleted: false });
 
     res.status(200).json({
@@ -744,20 +766,28 @@ router.get("/active", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const obituaryRemembarancePackagesId = req.params.id;
+  const packageId = req.params.id;
 
-  if (!mongoose.isValidObjectId(obituaryRemembarancePackagesId)) {
-    return res.status(400).send("Invalid obituary or remembarance package ID");
+  if (!mongoose.isValidObjectId(packageId)) {
+    return res.status(400).send("Invalid obituary or remembrance package ID");
   }
 
   try {
-    const obituaryRemembarancePackage = await ObituaryRemembarancePackages.findById(obituaryRemembarancePackagesId);
-    if (!obituaryRemembarancePackage) {
-      return res.status(404).send("Obituary or remembarance package not found");
+    const packageData = await ObituaryRemembarancePackages.findById(packageId)
+      .populate({ path: 'basePrice.country', select: 'name currencyCode' })
+      .populate({ path: 'priceList.country', select: 'name currencyCode' })    
+      .populate('addons')                                       
+      .populate('bgColors')                                      
+      .populate('primaryImageBgFrames');                        
+
+    if (!packageData) {
+      return res.status(404).send("Obituary or remembrance package not found");
     }
-    res.status(200).send(obituaryRemembarancePackage);
+
+    res.status(200).json(packageData);
   } catch (error) {
-    res.status(500).send("Error retrieving the obituary or remembarance package");
+    console.error("Error retrieving package:", error);
+    res.status(500).send("Error retrieving the obituary or remembrance package");
   }
 });
 

@@ -35,14 +35,28 @@ const obituaryRemembarancePackagesSchema = mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isPriority: {
+        type: Boolean,
+        default: false,
+    },
+    isFeatured: {
+        type: Boolean,
+        default: false,
+    },
     isPremium: {
         type: Boolean,
         default: false,
     },
-    price: {
-        type: Number,
-        min: 0,
-        required: true,
+    basePrice: {
+        country: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Country'
+        },
+        price: {
+            type: Number,
+            min: 0,
+            required: true,
+        }, 
     },
     duration: {
         type: Number,
@@ -73,6 +87,14 @@ const obituaryRemembarancePackagesSchema = mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    isSocialSharing: {
+        type: Boolean,
+        default: false,
+    },
+    isSlideShow: {
+        type: Boolean,
+        default: false,
+    },
     wordLimit: {
         type: Number,
         min: 0,
@@ -80,19 +102,15 @@ const obituaryRemembarancePackagesSchema = mongoose.Schema({
     },
     priceList:[
         {
-            country: {
-                type: String,
-                required: true,
-            },
-            currencyCode: {
-                type: String,
-                required: true,
-            },
-            price: {
-                type: Number,
-                min: 0,
-                required: true,
-            }, 
+        country: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Country'
+        },
+        price: {
+            type: Number,
+            min: 0,
+            required: true,
+        }, 
         }
     ],
     isTributeVideoUploading: {

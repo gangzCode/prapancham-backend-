@@ -44,6 +44,8 @@ const tributeItemsRoutes = require("./routers/tribute-items");
 const countryRoutes = require("./routers/country");
 const quotesRoutes = require("./routers/quotes");
 const youtubeNewsRoutes = require("./routers/youtubeNews");
+const orderRoutes = require("./routers/orders");
+const podcastRoutes = require("./routers/podacast");
 
 const api = process.env.API_URL;
 
@@ -60,6 +62,8 @@ app.use(`${api}/tribute-items`, tributeItemsRoutes);
 app.use(`${api}/country`, countryRoutes);
 app.use(`${api}/quotes`, quotesRoutes);
 app.use(`${api}/youtube-news`, youtubeNewsRoutes);
+app.use(`${api}/order`, orderRoutes);
+app.use(`${api}/podcast`, podcastRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")
@@ -93,5 +97,9 @@ const connectToDB = async () => {
 // Connect to DB only once before handling requests
 connectToDB();
 
+/* app.listen(PORT, () => {
+  console.log('server is running http://localhost:4000');
+});
+ */
 
 module.exports = app;

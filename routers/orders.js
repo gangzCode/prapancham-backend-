@@ -1,1190 +1,524 @@
-// const express = require("express");
-// const http = require("https");
-// const router = express.Router();
-// const { Order } = require("../models/order");
-// const { OrderItem } = require("../models/order-item");
-// const { verifyToken, verifyTokenAndAdmin } = require("./verifyToken");
-// const { Cart } = require("../models/cart");
-// const { auth0Verify } = require("./auth0-verify");
-// const { Product } = require("../models/product");
-// const { ShippingPrice } = require("../models/shippingPrice");
-// const generateReport = require("../report/generate-report");
-// const cors = require("cors");
-// const { ClientAddress } = require("../models/clients-address");
-// const countryList = require("react-select-country-list");
-// // const {sendOrderPlacedEmail} = require("../report/mailgun");
-// const { sendOrderPlacedEmail, sendOrderUpdateEmail } = require("../report/nodemailer");
-// const { link } = require("fs");
-// const request = require("request");
-// const { Tax } = require("../models/tax");
-
-// //CREATE
-// router.post("/", verifyToken, async (req, res) => {
-//   const orderItemsIds = Promise.all(
-//     req.body.orderItems.map(async (orderitem) => {
-//       let newOrderItem = new OrderItem({
-//         quantity: orderitem.quantity,
-//         product: orderitem.product,
-//       });
-
-//       newOrderItem = await newOrderItem.save();
-
-//       return newOrderItem._id;
-//     })
-//   );
-
-//   const orderItemsIdsResolved = await orderItemsIds;
-
-//   let order = new Order({
-//     orderItems: orderItemsIdsResolved,
-//     shippingAddress1: req.body.shippingAddress1,
-//     shippingAddress2: req.body.shippingAddress2,
-//     city: req.body.city,
-//     zip: req.body.zip,
-//     country: req.body.country,
-//     phone: req.body.phone,
-//     status: req.body.status,
-//     totalPrice: req.body.totalPrice,
-//     user: req.body.user,
-//   });
-
-//   order = await order.save();
-
-//   if (!order) return res.status(400).send("the order cannot be created!");
-
-//   return res.status(200).send(order);
-// });
-
-// //UPDATE
-// router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
-//   const order = await Order.findByIdAndUpdate(
-//     req.params.id,
-//     {
-//       status: req.body.status,
-//     },
-//     { new: true }
-//   );
-
-//   if (!order) return res.status(400).send("the order cannot be update!");
-
-//   res.send(order);
-// });
-
-// //UPDATE ORDER
-// router.post("/updateOrder", verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     const order = await Order.findById(req.body.orderId);
-//     if (order.status === "P") {
-//       if (req.body.newStatus !== "PR" && req.body.newStatus !== "C") {
-//         return res.status(400).send("INVALID REQUEST. Cannot set order to requested status");
-//       }
-//     } else if (order.status === "PR") {
-//       if (req.body.newStatus !== "S" && req.body.newStatus !== "C") {
-//         return res.status(400).send("INVALID REQUEST. Cannot set order to requested status");
-//       }
-//     } else if (order.status === "S") {
-//       if (req.body.newStatus !== "D") {
-//         return res.status(400).send("INVALID REQUEST. Cannot set order to requested status");
-//       }
-//     } else if (order.status === "D") {
-//       if (req.body.newStatus !== "F" && req.body.newStatus !== "C") {
-//         return res.status(400).send("INVALID REQUEST. Cannot set order to requested status");
-//       }
-//     } else {
-//       return res.status(400).send("INVALID REQUEST. Cannot set order to requested status");
-//     }
-//     if (req.body.newStatus === "S" || req.body.newStatus === "s") {
-//       await Order.findByIdAndUpdate(req.body.orderId, {
-//         status: req.body.newStatus,
-//         remark: req.body.remark,
-//         tracking: req.body.tracker,
-//       });
-//     } else {
-//       await Order.findByIdAndUpdate(req.body.orderId, {
-//         status: req.body.newStatus,
-//         remark: req.body.remark,
-//       });
-//     }
-
-//     await sendOrderUpdateEmail(req.body.orderId);
-
-//     return res.status(200).send();
-//   } catch (e) {
-//     return res.status(500).send();
-//   }
-// });
-
-// //DELETE ORDER
-// router.delete("/:id", verifyTokenAndAdmin, (req, res) => {
-//   Order.findByIdAndRemove(req.params.id)
-//     .then(async (order) => {
-//       if (order) {
-//         await order.orderItems.map(async (orderItem) => {
-//           await OrderItem.findByIdAndRemove(orderItem);
-//         });
-//         return res.status(200).json({ success: true, message: "the order is deleted!" });
-//       } else {
-//         return res.status(404).json({ success: false, message: "order not found!" });
-//       }
-//     })
-//     .catch((err) => {
-//       return res.status(500).json({ success: false, error: err });
-//     });
-// });
-
-// //GET USER ORDERS
-// router.get(`/find/:userId`, verifyToken, async (req, res) => {
-//   const userOrderList = await Order.find({ user: req.params.userId })
-//     .populate({
-//       path: "orderItems",
-//       populate: {
-//         path: "product",
-//         populate: "category",
-//       },
-//     })
-//     .sort({ dateOrdered: -1 });
-
-//   if (!userOrderList) {
-//     res.status(500).json({ success: false });
-//   }
-//   res.send(userOrderList);
-// });
-
-// // //GET ALL ORDERS
-// router.get(`/`, verifyTokenAndAdmin, async (req, res) => {
-//   const orderList = await Order.find().populate("user", "username").sort({ dateOrdered: -1 });
-
-//   if (!orderList) {
-//     res.status(500).json({ success: false });
-//   }
-//   res.send(orderList);
-// });
-
-// //GET SPECIFIC ORDER
-// /*router.get(`/:id`, verifyTokenAndAdmin, async (req, res) => {
-//     const order = await Order.findById(req.params.id)
-//         .populate('user', 'username')
-//         .populate({
-//             path: 'orderItems',
-//             populate: {
-//                 path: 'product',
-//                 populate: 'category'
-//             }
-//         });
-
-//     if (!order) {
-//         res.status(500).json({success: false});
-//     }
-//     res.send(order);
-// });*/
-
-// // GET MONTHLY INCOME
-// router.get("/income", verifyTokenAndAdmin, async (req, res) => {
-//   const product = req.query.pid;
-//   const date = new Date();
-//   const lastMonth = new Date(date.setMonth(date.getMonth() - 1));
-//   const previousMonth = new Date(new Date().setMonth(lastMonth.getMonth() - 1));
-
-//   try {
-//     const income = await Order.aggregate([
-//       {
-//         $match: {
-//           createdAt: { $gte: previousMonth },
-//           ...(product && {
-//             products: { $elemMatch: { product } },
-//           }),
-//         },
-//       },
-//       {
-//         $project: {
-//           month: { $month: "$createdAt" },
-//           sales: "$amount",
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: "$month",
-//           total: { $sum: "$sales" },
-//         },
-//       },
-//     ]);
-//     res.status(200).json(income);
-//   } catch (err) {
-//     res.status(500).json(err);
-//   }
-// });
-
-// //GET THE TOTAL INCOME
-// router.get("/get/total-sales", verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     const result = await Order.aggregate([
-//       {
-//         $group: {
-//           _id: null,
-//           totalGross: { $sum: "$grossTotal" },
-//         },
-//       },
-//     ]);
-
-//     const totalGross = result.length > 0 ? result[0].totalGross : 0;
-
-//     return res.status(200).json({ success: true, totalGross });
-//   } catch (error) {
-//     console.error("Error fetching total gross:", error);
-//     return res.status(500).json({ success: false, message: "Failed to fetch total gross." });
-//   }
-// });
-
-// router.get("/get/sales-summary", verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     const currentYear = new Date().getFullYear();
-//     const startYear = currentYear - 4; // Past 5 years including the current year
-
-//     const summary = await Order.aggregate([
-//       // Step 1: Match only orders from the past 5 years
-//       {
-//         $match: {
-//           date: {
-//             $gte: new Date(`${startYear}-01-01`), // Start from January 1st of the 5th year back
-//             $lte: new Date(`${currentYear}-12-31`), // Until the end of the current year
-//           },
-//         },
-//       },
-//       // Step 2: Project the year and month from the `date` field
-//       {
-//         $project: {
-//           year: { $year: "$date" },
-//           month: { $month: "$date" },
-//           grossTotal: 1,
-//         },
-//       },
-//       // Step 3: Group by year and month, summing the grossTotal
-//       {
-//         $group: {
-//           _id: { year: "$year", month: "$month" },
-//           totalGrossTotal: { $sum: "$grossTotal" },
-//         },
-//       },
-//       // Step 4: Group by year to prepare for array format
-//       {
-//         $group: {
-//           _id: "$_id.year",
-//           monthlyTotals: {
-//             $push: { month: "$_id.month", total: "$totalGrossTotal" },
-//           },
-//         },
-//       },
-//       // Step 5: Project the results into the desired array format
-//       {
-//         $project: {
-//           year: "$_id",
-//           data: {
-//             $map: {
-//               input: { $range: [1, 13] }, // Loop through months 1 to 12
-//               as: "month",
-//               in: {
-//                 $let: {
-//                   vars: {
-//                     matchingMonth: {
-//                       $arrayElemAt: [
-//                         {
-//                           $filter: {
-//                             input: "$monthlyTotals",
-//                             as: "m",
-//                             cond: { $eq: ["$$m.month", "$$month"] },
-//                           },
-//                         },
-//                         0,
-//                       ],
-//                     },
-//                   },
-//                   in: { $ifNull: ["$$matchingMonth.total", 0] },
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       },
-//       // Step 6: Sort the final result by year (optional)
-//       {
-//         $sort: { year: 1 },
-//       },
-//     ]);
-//     // .then((result) => {
-//     //   console.log(result);
-//     //   return res.status(200).json({ success: true, summary: result });
-//     // })
-//     // .catch((err) => {
-//     //   console.error(err);
-//     //   return res.status(500).json({ success: false, message: "Failed to fetch total gross." });
-//     // });
-//     return res.status(200).json(summary);
-//   } catch (error) {
-//     console.error("Error fetching total gross:", error);
-//     return res.status(500).json({ success: false, message: "Failed to fetch total gross." });
-//   }
-// });
-
-// router.get("/get/total-income", verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     const result = await Order.aggregate([
-//       {
-//         $group: {
-//           _id: null,
-//           totalIncome: { $sum: "$subTotal" },
-//         },
-//       },
-//     ]);
-
-//     const totalIncome = result.length > 0 ? result[0].totalIncome : 0;
-
-//     return res.status(200).json({ success: true, totalIncome });
-//   } catch (error) {
-//     console.error("Error fetching total subTotal:", error);
-//     return res.status(500).json({ success: false, message: "Failed to fetch total subTotal." });
-//   }
-// });
-
-// //GET THE TOTAL ORDER COUNT
-// router.get(`/get/count`, verifyTokenAndAdmin, async (req, res) => {
-//   const orderCount = await Order.countDocuments();
-
-//   if (!orderCount) {
-//     return res.status(500).json({ success: false });
-//   }
-//   return res.send({ orderCount: orderCount });
-// });
-
-// //GET ALL ORDERS
-// router.get(`/getAllOrders`, verifyTokenAndAdmin, async (req, res) => {
-//   const order = await Order.find({})
-//     .populate("address")
-//     .populate("orderItems.itemId", { _id: 1, name: 1, price: 1, discountedPrice: 1, image: 1 });
-//   return res.send(order);
-// });
-
-// router.get("/getLatestOrder", verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     const latestOrder = await Order.find({})
-//       .sort({ createdAt: -1 }) // Sort by createdAt in descending order to get the latest order
-//       .limit(1) // Limit the result to only the latest order
-//       .populate("address")
-//       .populate("orderItems.itemId", { _id: 1, name: 1, price: 1, discountedPrice: 1, image: 1 });
-
-//     return res.send(latestOrder);
-//   } catch (error) {
-//     return res.status(500).send({ error: "An error occurred while fetching the latest order." });
-//   }
-// });
-
-// /* router.post(`/placeOrder`, auth0Verify, async (req, res) => {
-//     try {
-//         let cart = await Cart.find({ username: req.body.email }).populate('product',
-//             { _id : 1, name: 1, price: 1, discountedPrice: 1, variations: 1, isNumericVariation: 1 });
-//         let cartArray = [];
-//         for (let item of cart) {
-//             let cartItem = item.toJSON();
-//             if (item.product.isNumericVariation) {
-//                 let flag = false;
-//                 for (let variation of item.product.variations) {
-//                     for (let varItem of variation.innerVariations) {
-//                         if (variation.color === item.color && varItem.size === parseInt(item.size)) {
-//                             cartItem.stockSize = variation.quantity;
-//                             cartItem.varPrice = varItem.price;
-//                             cartItem.varDiscountedPrice = varItem.discountedPrice;
-//                             cartItem.varWeight = varItem.weight;
-//                             flag = true;
-//                             break;
-//                         }
-//                     }
-//                     if (flag) {
-//                         break;
-//                     }
-//                 }
-//             } else {
-//                 for (let variation of item.product.variations) {
-//                     if (variation.color === item.color && variation.size === item.size) {
-//                         cartItem.stockSize = variation.quantity
-//                         cartItem.varPrice = variation.price;
-//                         cartItem.varDiscountedPrice = variation.discountedPrice;
-//                         cartItem.varWeight = variation.weight;
-//                         break
-//                     }
-//                 }
-//             }
-//             cartArray.push(cartItem);
-//         }
-
-//         let itemsInCart = []
-//         for (let item of cartArray) {
-//             item.neededTot = 0
-//             let cartItem = null
-//             for (let car of itemsInCart) {
-//                 if (!!item.product.isNumericVariation && !!car.isNumericVariation) {
-//                     if (car.itemId === item.product._id.toString() && car.itemColor === item.color) {
-//                         item.neededTot += ((car.itemQuantity * car.itemSize) + (item.quantity * item.size))
-//                         if (item.neededTot > item.stockSize) {
-//                             return res.status(200).json(
-//                                 {success: false, message: "Only " + item.stockSize +
-//                                         ((!!item.product.isNumericVariation) ? ' meters' : ' items') + " in stock from " + item.product.name });
-//                         }
-//                     }
-//                 }
-//                 if (car.itemId === item.product._id.toString() && car.itemSize===item.size && car.itemColor===item.color) {
-//                     cartItem = car
-//                     let neededTot;
-//                     if (!!item.product.isNumericVariation) {
-//                         neededTot = ((car.itemQuantity + item.quantity) * item.size)
-//                     } else {
-//                         neededTot = (car.itemQuantity + item.quantity)
-//                     }
-//                     if (item.stockSize < neededTot) {
-//                         return res.status(200).json(
-//                             {success: false, message: "Only " + item.stockSize +
-//                                     ((!!item.product.isNumericVariation) ? ' meters' : ' items') + " in stock from " + item.product.name });
-//                     }
-//                     car.itemQuantity += item.quantity
-//                 }
-//             }
-//             if (!cartItem) {
-//                 cartItem = {
-//                     itemId: item.product._id.toString(),
-//                     itemSize: item.size,
-//                     itemColor: item.color,
-//                     itemQuantity: item.quantity,
-//                     isNumericVariation: item.product.isNumericVariation,
-//                     itemPrice: item.varPrice,
-//                     itemDiscountedPrice: item.varDiscountedPrice,
-//                     itemWeight: item.varWeight
-//                 }
-//                 let neededTot;
-//                 if (!!item.product.isNumericVariation) {
-//                     neededTot = (item.quantity * item.size)
-//                 } else {
-//                     neededTot = item.quantity
-//                 }
-//                 if (item.stockSize < neededTot) {
-//                     return res.status(200).json(
-//                         {success: false, message: "Only " + item.stockSize +
-//                                 ((!!item.product.isNumericVariation) ? ' meters' : ' items') + " in stock from " + item.product.name });
-//                 }
-//                 itemsInCart.push(cartItem);
-//             }
-//         }
-
-//         let rawTot = 0;
-//         let totDiscounts = 0;
-//         let totWeight = 0;
-//         let finalShipping = 0;
-//         for (let car of itemsInCart) {
-//             rawTot += (car.itemPrice * car.itemQuantity)
-//             if (car.itemDiscountedPrice) {
-//                 totDiscounts += ((car.itemPrice - car.itemDiscountedPrice) * car.itemQuantity)
-//             }
-//             totWeight += (car.itemWeight * car.itemQuantity)
-//         }
-//         const address = await ClientAddress.findById(req.body.address);
-//         let finalShippingObj = await calculateShipping(totWeight, address.country);
-//         if (req.body.delivery === 'standard' || req.body.delivery === 'premium') {
-//             finalShipping = finalShippingObj.normalPrice
-//         } else {
-//             finalShipping = finalShippingObj.expensivePrice
-//         }
-
-//         let order = new Order({
-//             username: req.body.email,
-//             address: req.body.address,
-//             delivery: req.body.delivery,
-//             orderItems: itemsInCart,
-//             rawTotal: rawTot,
-//             discounts: totDiscounts,
-//             totalWeight: totWeight,
-//             shipping: finalShipping,
-//         })
-//         await order.save();
-//         await Product.bulkWrite(
-//             itemsInCart.map((data) => {
-//                 if (!!data.isNumericVariation) {
-//                     return ({
-//                         updateOne: {
-//                             filter: {
-//                                 "_id": data.itemId,
-//                                 "variations.color": data.itemColor,
-//                                 "variations.innerVariations.size": data.itemSize
-//                             },
-//                             update: {$inc: {"variations.$.quantity": ((parseInt(data.itemSize) * data.itemQuantity) * -1), purchaseCount: 1}}
-//                         }
-//                     })
-//                 } else {
-//                     return ({
-//                         updateOne: {
-//                             filter: {
-//                                 "_id": data.itemId,
-//                                 "variations.color": data.itemColor,
-//                                 "variations.size": data.itemSize
-//                             },
-//                             update: {$inc: {"variations.$.quantity": (data.itemQuantity * -1), purchaseCount: 1}}
-//                         }
-//                     })
-//                 }
-//             }
-//             ))
-//         await Cart.deleteMany({username: req.body.email});
-//         sendOrderPlacedEmail(order._id);
-//         return res.status(200).json({success: true});
-//     } catch (e) {
-//         console.error(e)
-//         return res.status(500).json({success: false});
-//     }
-// }); */
-
-// //GET ORDERS FOR USER
-// router.post(`/getOrdersForUser`, auth0Verify, async (req, res) => {
-//   const order = await Order.find({ username: req.body.username })
-//     .populate("address")
-//     .populate("orderItems.itemId", { _id: 1, name: 1, price: 1, discountedPrice: 1, image: 1 });
-//   return res.send(order);
-// });
-
-// router.get("/getPaymentPage", async (req, res) => {
-//   const username = req.query.username;
-//   const address = req.query.address;
-//   const delivery = req.query.delivery;
-
-//   res.render("paymentPage", { username, delivery, address, accessToken: process.env.CLOVER_TOKEN });
-// });
-
-// router.post("/charge", auth0Verify, async (req, res) => {
-//   const username = req.body.username;
-
-//   const currency = "cad"; // TODO IMPORTANT: CHANGE CURRENCY TO CAD ON PRODUCTION
-//   const cToken = req.body.cToken;
-
-//   let cart = await Cart.find({ username: username }).populate("product", {
-//     _id: 1,
-//     name: 1,
-//     price: 1,
-//     discountedPrice: 1,
-//     image: 1,
-//     imageAlt: 1,
-//     description: 1,
-//     variations: 1,
-//     isNumericVariation: 1,
-//   });
-
-//   if (!cart || cart.length === 0) {
-//     return res.status(500).json({ success: false, message: "Cart cannot be empty when charging" });
-//   }
-
-//   // Subtotal before taxes or shipping
-//   let tempSubTotal = 0;
-
-//   let cartArray = [];
-//   // let tempPrice = null;
-//   // let tempDiscountedPrice = null;
-
-//   for (let item of cart) {
-//     let cartItem = item.toJSON();
-
-//     if (item.product && item.product.variations) {
-//       for (let variation of item.product.variations) {
-//         cartItem.stockSize = variation.quantity;
-//         cartItem.price = variation.price;
-//         cartItem.discountedPrice = variation.discountedPrice;
-//         break;
-//       }
-//     } else {
-//       cartItem.stockSize = null;
-//       cartItem.price = null;
-//       cartItem.discountedPrice = null;
-//     }
-
-//     if (!!cartItem.discountedPrice) tempSubTotal += cartItem.discountedPrice;
-//     else if (cartItem.price) tempSubTotal += cartItem.price;
-
-//     // item.product.price = tempPrice;
-//     // item.product.discountedPrice = tempDiscountedPrice;
-//     cartArray.push(cartItem);
-//   }
-
-//   if (tempSubTotal <= 0) {
-//     return res.status(500).json({ success: false, message: "Total amount of cart cannot be zero" });
-//   }
-
-//   // Shipping amount
-//   const shipping = tempSubTotal > 100 ? 0 : 10;
-
-//   const tempTotal = tempSubTotal + shipping;
-
-//   const taxes = await Tax.find({ isActive: true });
-
-//   const taxAmount = taxes.reduce((total, currentTax) => {
-//     return total + (tempTotal / 100) * currentTax.percentage;
-//   }, 0);
-
-//   const options = {
-//     method: "POST",
-//     url: "https://scl-sandbox.dev.clover.com/v1/charges",
-//     headers: {
-//       accept: "application/json",
-//       "content-type": "application/json",
-//       authorization: `Bearer ${process.env.CLOVER_SECRET}`,
-//     },
-//     body: {
-//       ecomind: "ecom",
-//       metadata: { existingDebtIndicator: false },
-//       amount: (tempSubTotal + taxAmount + shipping) * 100,
-//       currency: currency,
-//       source: cToken,
-//     },
-//     json: true,
-//   };
-
-//   request(options, async function (error, response, body) {
-//     if (error) {
-//       return res.status(500).json({ success: false, message: "Error occurred" });
-//     }
-
-//     if (body && body.status != undefined && body.status === "succeeded") {
-//       try {
-//         let cart = await Cart.find({ username: username }).populate({
-//           path: "product",
-//           select: "_id name isNumericVariation variations",
-//         });
-
-//         let cartArray = [];
-//         for (let item of cart) {
-//           let cartItem = item.toJSON();
-
-//           // Find the specific variation using the variation ID manually
-//           let variation = cartItem.product.variations.find(
-//             (v) => v._id.toString() === item.variation.toString()
-//           );
-//           if (!variation) {
-//             return res.status(400).json({
-//               success: false,
-//               message: `Variation with ID ${item.variation} not found for product ${item.product._id}`,
-//             });
-//           }
-
-//           cartItem.stockSize = variation.quantity;
-//           cartItem.varPrice = variation.price;
-//           cartItem.varDiscountedPrice = variation.discountedPrice;
-//           cartItem.varWeight = variation.weight;
-//           cartItem.variationName = variation.name; // Add this line to include the variation name
-
-//           cartArray.push(cartItem);
-//         }
-
-//         console.log(cartArray);
-
-//         let itemsInCart = [];
-//         for (let item of cartArray) {
-//           let cartItem = null;
-
-//           // Check if the item already exists in the itemsInCart array
-//           for (let car of itemsInCart) {
-//             if (
-//               car.itemId === item.product._id.toString() &&
-//               car.variationId === item.variation.toString()
-//             ) {
-//               cartItem = car;
-//               let neededTot = car.itemQuantity + item.quantity;
-
-//               if (item.stockSize < neededTot) {
-//                 return res.status(200).json({
-//                   success: false,
-//                   message: `Only ${item.stockSize} ${
-//                     item.product.isNumericVariation ? "meters" : "items"
-//                   } in stock for ${item.product.name}`,
-//                 });
-//               }
-
-//               car.itemQuantity += item.quantity;
-//               break;
-//             }
-//           }
-
-//           if (!cartItem) {
-//             cartItem = {
-//               itemId: item.product._id.toString(),
-//               variationId: item.variation.toString(),
-//               variationName: item.variationName, // Include the variation name here
-//               itemQuantity: item.quantity,
-//               isNumericVariation: item.product.isNumericVariation,
-//               itemPrice: item.varPrice,
-//               itemDiscountedPrice: item.varDiscountedPrice,
-//               itemWeight: item.varWeight,
-//             };
-
-//             let neededTot = item.quantity;
-
-//             if (item.stockSize < neededTot) {
-//               return res.status(200).json({
-//                 success: false,
-//                 message: `Only ${item.stockSize} ${
-//                   item.product.isNumericVariation ? "meters" : "items"
-//                 } in stock for ${item.product.name}`,
-//               });
-//             }
-
-//             itemsInCart.push(cartItem);
-//           }
-//         }
-
-//         let rawTot = 0;
-//         let totDiscounts = 0;
-//         let totWeight = 0;
-
-//         for (let car of itemsInCart) {
-//           rawTot += car.itemPrice * car.itemQuantity;
-
-//           if (car.itemDiscountedPrice) {
-//             totDiscounts += (car.itemPrice - car.itemDiscountedPrice) * car.itemQuantity;
-//           }
-
-//           totWeight += car.itemWeight * car.itemQuantity;
-//         }
-
-//         let grossTax = taxes.reduce((total, currentTax) => {
-//           return total + (tempSubTotal / 100) * currentTax.percentage;
-//         }, 0);
-
-//         let grossTotal = tempSubTotal + shipping + grossTax;
-
-//         let grossSubtotal = rawTot - totDiscounts;
-
-//         // const address = await ClientAddress.find({ email: username });
-//         console.log(itemsInCart);
-
-//         // Create a new order
-//         let order = new Order({
-//           username: username,
-//           address: req.body.address,
-//           delivery: "standard",
-//           orderItems: itemsInCart,
-//           rawTotal: rawTot,
-//           discounts: totDiscounts,
-//           subTotal: grossSubtotal,
-//           grossTax: grossTax, // Save the grossTax
-//           grossTotal: grossTotal, // Save the grossTotal
-//           // totalWeight: totWeight,
-//           taxes: taxes.map((tax) => {
-//             return {
-//               taxId: tax._id,
-//               taxname: tax.taxname,
-//               percentage: tax.percentage,
-//               amount: (tempTotal / 100) * tax.percentage,
-//             };
-//           }),
-//           shipping: shipping,
-//         });
-
-//         await order.save();
-
-//         // Update the product quantities and purchase counts for the variations
-//         for (let data of itemsInCart) {
-//           await Product.updateOne(
-//             { _id: data.itemId, "variations._id": data.variationId },
-//             {
-//               $inc: {
-//                 "variations.$.quantity": data.itemQuantity * -1,
-//                 purchaseCount: 1,
-//               },
-//             }
-//           );
-//         }
-
-//         // Clear the cart for the user
-//         await Cart.deleteMany({ username: username });
-
-//         // Send order placed email
-//         sendOrderPlacedEmail(order._id);
-
-//         // Return the order object in the response
-//         return res.status(200).json({ success: true, order: order._id });
-//       } catch (e) {
-//         console.error(e);
-//         return res
-//           .status(500)
-//           .json({ success: false, message: "An error occurred while placing the order." });
-//       }
-//     }
-//     // return res.status(200).json({ success: true });
-//     else
-//       return res
-//         .status(500)
-//         .json({ success: false, message: body.error?.message || "Error occurred" });
-//   });
-// });
-
-// // router.post(`/placeOrder`, auth0Verify, async (req, res) => {
-// //   try {
-// //     let cart = await Cart.find({ username: req.body.email }).populate({
-// //       path: "product",
-// //       select: "_id name isNumericVariation variations",
-// //     });
-
-// //     let cartArray = [];
-// //     for (let item of cart) {
-// //       let cartItem = item.toJSON();
-
-// //       // Find the specific variation using the variation ID manually
-// //       let variation = cartItem.product.variations.find(
-// //         (v) => v._id.toString() === item.variation.toString()
-// //       );
-// //       if (!variation) {
-// //         return res.status(400).json({
-// //           success: false,
-// //           message: `Variation with ID ${item.variation} not found for product ${item.product._id}`,
-// //         });
-// //       }
-
-// //       cartItem.stockSize = variation.quantity;
-// //       cartItem.varPrice = variation.price;
-// //       cartItem.varDiscountedPrice = variation.discountedPrice;
-// //       cartItem.varWeight = variation.weight;
-// //       cartItem.variationName = variation.name; // Add this line to include the variation name
-
-// //       cartArray.push(cartItem);
-// //     }
-
-// //     let itemsInCart = [];
-// //     for (let item of cartArray) {
-// //       let cartItem = null;
-
-// //       // Check if the item already exists in the itemsInCart array
-// //       for (let car of itemsInCart) {
-// //         if (
-// //           car.itemId === item.product._id.toString() &&
-// //           car.variationId === item.variation.toString()
-// //         ) {
-// //           cartItem = car;
-// //           let neededTot = car.itemQuantity + item.quantity;
-
-// //           if (item.stockSize < neededTot) {
-// //             return res.status(200).json({
-// //               success: false,
-// //               message: `Only ${item.stockSize} ${
-// //                 item.product.isNumericVariation ? "meters" : "items"
-// //               } in stock for ${item.product.name}`,
-// //             });
-// //           }
-
-// //           car.itemQuantity += item.quantity;
-// //           break;
-// //         }
-// //       }
-
-// //       if (!cartItem) {
-// //         cartItem = {
-// //           itemId: item.product._id.toString(),
-// //           variationId: item.variation.toString(),
-// //           variationName: item.variationName, // Include the variation name here
-// //           itemQuantity: item.quantity,
-// //           isNumericVariation: item.product.isNumericVariation,
-// //           itemPrice: item.varPrice,
-// //           itemDiscountedPrice: item.varDiscountedPrice,
-// //           itemWeight: item.varWeight,
-// //         };
-
-// //         let neededTot = item.quantity;
-
-// //         if (item.stockSize < neededTot) {
-// //           return res.status(200).json({
-// //             success: false,
-// //             message: `Only ${item.stockSize} ${
-// //               item.product.isNumericVariation ? "meters" : "items"
-// //             } in stock for ${item.product.name}`,
-// //           });
-// //         }
-
-// //         itemsInCart.push(cartItem);
-// //       }
-// //     }
-
-// //     let rawTot = 0;
-// //     let totDiscounts = 0;
-// //     let totWeight = 0;
-// //     let finalShipping = 0;
-
-// //     for (let car of itemsInCart) {
-// //       rawTot += car.itemPrice * car.itemQuantity;
-
-// //       if (car.itemDiscountedPrice) {
-// //         totDiscounts += (car.itemPrice - car.itemDiscountedPrice) * car.itemQuantity;
-// //       }
-
-// //       totWeight += car.itemWeight * car.itemQuantity;
-// //     }
-
-// //     const address = await ClientAddress.findById(req.body.address);
-
-// //     // Create a new order
-// //     let order = new Order({
-// //       username: req.body.email,
-// //       address: req.body.address,
-// //       delivery: req.body.delivery,
-// //       orderItems: itemsInCart,
-// //       rawTotal: rawTot,
-// //       discounts: totDiscounts,
-// //       totalWeight: totWeight,
-// //       shipping: finalShipping,
-// //     });
-
-// //     await order.save();
-
-// //     // Update the product quantities and purchase counts for the variations
-// //     for (let data of itemsInCart) {
-// //       await Product.updateOne(
-// //         { _id: data.itemId, "variations._id": data.variationId },
-// //         {
-// //           $inc: {
-// //             "variations.$.quantity": data.itemQuantity * -1,
-// //             purchaseCount: 1,
-// //           },
-// //         }
-// //       );
-// //     }
-
-// //     // Clear the cart for the user
-// //     await Cart.deleteMany({ username: req.body.email });
-
-// //     // Send order placed email
-// //     sendOrderPlacedEmail(order._id);
-
-// //     // Return the order object in the response
-// //     return res.status(200).json({ success: true });
-// //   } catch (e) {
-// //     console.error(e);
-// //     return res
-// //       .status(500)
-// //       .json({ success: false, message: "An error occurred while placing the order." });
-// //   }
-// // });
-
-// //Calculate postal charge
-// router.post(`/findPostalCharges`, async (req, res) => {
-//   try {
-//     let cart = await Cart.find({ username: req.body.email }).populate("product", {
-//       _id: 1,
-//       variations: 1,
-//       isNumericVariation: 1,
-//     });
-//     let totWeight = 0;
-//     for (let item of cart) {
-//       if (!!item.product.isNumericVariation) {
-//         for (let variation of item.product.variations) {
-//           for (let innerVar of variation.innerVariations) {
-//             if (variation.color === item.color && innerVar.size === parseInt(item.size)) {
-//               totWeight += item.quantity * innerVar.weight;
-//               break;
-//             }
-//           }
-//         }
-//       } else {
-//         for (let variation of item.product.variations) {
-//           if (variation.color === item.color && variation.size === item.size) {
-//             totWeight += item.quantity * variation.weight;
-//             break;
-//           }
-//         }
-//       }
-//     }
-//     // const dataObj = await calculateShipping(totWeight, req.body.country);
-//     const dataObj = { normalPrice: 10.0, expensivePrice: 15.0 };
-//     return res.send(dataObj);
-//   } catch (e) {
-//     console.error(e);
-//     return res.status(500).json({ success: false });
-//   }
-// });
-
-// router.post(`/printReportForUser`, auth0Verify, async (req, res) => {
-//   try {
-//     let data = await generateAndDownloadReport(req, res);
-//     return res.status(200).json({ dataStr: data.toString() });
-//   } catch (e) {
-//     console.error(e);
-//     return res.status(500).json({ success: false });
-//   }
-// });
-
-// router.post(`/printReportForAdmin`, verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     let data = await generateAndDownloadReport(req, res);
-//     return res.status(200).json({ dataStr: data.toString() });
-//   } catch (e) {
-//     console.error(e);
-//     return res.status(500).json({ success: false });
-//   }
-// });
-
-// function addWrappedText({ text, textWidth, doc, initialYPosition = 10 }) {
-//   text += ",";
-//   let textLines = doc.splitTextToSize(text, textWidth); // Split the text into lines
-//   let pageHeight = doc.internal.pageSize.height; // Get page height, well use this for auto-paging
-
-//   let cursorY = initialYPosition;
-
-//   textLines.forEach((lineText) => {
-//     if (cursorY > pageHeight) {
-//       // Auto-paging
-//       doc.addPage();
-//       cursorY = 10;
-//     }
-//     doc.text(10, cursorY, lineText);
-//     cursorY += 10;
-//   });
-//   return cursorY;
-// }
-
-// router.post(`/printAddressForAdmin`, verifyTokenAndAdmin, async (req, res) => {
-//   try {
-//     const { jsPDF } = require("jspdf");
-//     const order = await Order.findById(req.body.orderId).populate("address");
-//     let fileName = order._id + "address.pdf";
-//     const doc = new jsPDF({
-//       compress: true,
-//       orientation: "landscape",
-//     });
-//     let address = order.address;
-//     let initialYPosition = 10;
-//     initialYPosition = addWrappedText({
-//       text: address.name,
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     initialYPosition = addWrappedText({
-//       text: address.number,
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     initialYPosition = addWrappedText({
-//       text: address.address,
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     initialYPosition = addWrappedText({
-//       text: address.town,
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     initialYPosition = addWrappedText({
-//       text: address.state,
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     initialYPosition = addWrappedText({
-//       text: countryList().getLabel(address.country),
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     initialYPosition = addWrappedText({
-//       text: address.postalCode,
-//       textWidth: 220,
-//       doc,
-//       initialYPosition: initialYPosition,
-//     });
-//     let data = doc.output("datauristring", { filename: fileName });
-//     return res.status(200).json({ dataStr: data.toString() });
-//     /*let fs = require('fs'),
-//             path = require('path'),
-//             filePath = path.join(__dirname, '../report/generated_reports/'+fileName);
-//         fs.readFile(filePath, {encoding: 'utf-8'}, function(err,data){
-//             if (!err) {
-//                 const fileNameTemp = 'order-address.pdf'
-//                 const stream = fs.createReadStream(filePath);
-//                 res.set({
-//                     'Content-Disposition': `attachment; filename='${fileNameTemp}'`,
-//                     'Content-Type': 'application/pdf',
-//                 });
-//                 stream.pipe(res);
-//                 fs.unlink(filePath, (err) => {
-//                     if (err) {
-//                         console.error(err);
-//                     }
-//                 });
-//             } else {
-//                 console.log(err);
-//                 return res.status(500).json({success: false});
-//             }
-//         });*/
-//   } catch (e) {
-//     console.error(e);
-//     return res.status(500).json({ success: false });
-//   }
-// });
-
-// async function generateAndDownloadReport(req, res) {
-//   try {
-//     const order = await Order.findById(req.body.orderId)
-//       .populate("address")
-//       .populate("orderItems.itemId", { _id: 1, name: 1, isNumericVariation: 1 });
-//     let fileName = req.body.orderId + ".pdf";
-//     let data = generateReport(fileName, order);
-//     return data.dataUriString;
-//     /*let fs = require('fs'),
-//             path = require('path'),
-//             filePath = path.join(__dirname, '../report/generated_reports/'+fileName);
-//         fs.readFile(filePath, {encoding: 'utf-8'}, function(err,data){
-//             if (!err) {
-//                 const fileNameTemp = 'order-invoice.pdf'
-//                 const stream = fs.createReadStream(filePath);
-//                 res.set({
-//                     'Content-Disposition': `attachment; filename='${fileNameTemp}'`,
-//                     'Content-Type': 'application/pdf',
-//                 });
-//                 stream.pipe(res);
-//                 fs.unlink(filePath, (err) => {
-//                     if (err) {
-//                         console.error(err);
-//                     }
-//                 });
-//             } else {
-//                 console.log(err);
-//                 return res.status(500).json({success: false});
-//             }
-//         });*/
-//   } catch (e) {
-//     console.error(e);
-//     return res.status(500).json({ success: false });
-//   }
-// }
-
-// async function calculateShipping(weight, countryCode) {
-//   let shippingPrices;
-//   shippingPrices = await ShippingPrice.findOne({ countries: { $in: countryCode } });
-//   if (shippingPrices == null) {
-//     shippingPrices = await ShippingPrice.findOne({ countries: { $in: "*" } });
-//   }
-//   weight = weight / 1000;
-//   let curRange = null;
-//   let largestRange = null;
-//   for (let priceRange of shippingPrices.priceVariations) {
-//     if (weight < priceRange.weight) {
-//       if (!curRange && weight < priceRange.weight) {
-//         curRange = priceRange;
-//       } else if (curRange && curRange.weight > priceRange.weight) {
-//         curRange = priceRange;
-//       }
-//       if (!largestRange) {
-//         largestRange = priceRange;
-//       } else if (largestRange.weight < priceRange.weight) {
-//         largestRange = priceRange;
-//       }
-//     }
-//   }
-//   if (!curRange) {
-//     curRange = largestRange;
-//   }
-//   return { normalPrice: curRange.regularPrice, expensivePrice: curRange.premiumPrice };
-// }
-
-// module.exports = router;
+const express = require("express");
+const router = express.Router();
+const { ObituaryRemembarancePackages } = require("../models/obituaryRemembarance-packages");
+const { verifyTokenAndAuthorization,verifyTokenAndAdmin } = require("./verifyToken");
+const { Addons } = require("../models/addons");
+const { Order } = require("../models/order");
+const { User } = require("../models/user");
+const { Country } = require("../models/country");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const multer = require("multer");
+const multerS3 = require("multer-s3");
+const aws = require("aws-sdk");
+const uuid = require("uuid");
+const { S3Client } = require("@aws-sdk/client-s3");
+const { sendOrderPlacedEmail } = require("../report/nodemailer");
+
+
+dotenv.config();
+
+aws.config.update({
+  secretAccessKey: process.env.SPACE_ACCESSKEYSECRET,
+  accessKeyId: process.env.SPACE_ACCESSKEYID,
+  region: process.env.SPACE_REGION,
+});
+
+const s3 = new S3Client({
+  //endpoint: process.env.SPACE_ENDPOINT,
+  region: process.env.SPACE_REGION,
+  credentials: {
+    accessKeyId: process.env.SPACE_ACCESSKEYID,
+    secretAccessKey: process.env.SPACE_ACCESSKEYSECRET,
+  },
+});
+
+const uploadAWS = (orderId) =>
+  multer({
+    storage: multerS3({
+      s3: s3,
+      acl: "public-read",
+      bucket: process.env.SPACE_BUCKET_NAME,
+      key: function (req, file, cb) {
+        const uniqueFilename = `${orderId}/${uuid.v4()}-${Date.now()}-${file.originalname}`;
+        cb(null, uniqueFilename);
+      },
+      contentType: multerS3.AUTO_CONTENT_TYPE,
+    }),
+});
+
+router.post("/", verifyTokenAndAuthorization, async (req, res) => {
+  let orderId;
+
+  try {
+    let order = new Order({ username: "" });
+    order = await order.save({ validateBeforeSave: false });
+    orderId = order._id.toString();
+
+    // Setup AWS upload fields
+    uploadAWS(orderId).fields([
+      { name: "primaryImage", maxCount: 1 },
+      { name: "thumbnailImage", maxCount: 1 },
+      { name: "additionalImages", maxCount: 10 }
+    ])(req, res, async (err) => {
+      if (err) {
+        await Order.findByIdAndDelete(orderId);
+        return res.status(500).send("Image upload failed");
+      }
+
+      req.body = sanitizeBodyKeys(req.body);
+
+      try {
+        const updatedOrder = await updateOrder(orderId, req.body, req.files);
+        if (!updatedOrder) {
+          await Order.findByIdAndDelete(orderId);
+          return res.status(500).send("Order update failed");
+        }
+
+        res.send(updatedOrder);
+      } catch (updateErr) {
+        await Order.findByIdAndDelete(orderId);
+        return res.status(500).send(updateErr.message || "Order update error");
+      }
+    });
+
+  } catch (e) {
+    if (orderId) {
+      await Order.findByIdAndDelete(orderId);
+    }
+    return res.status(500).send("Failed to create order");
+  }
+});
+
+router.post("/update", verifyTokenAndAdmin, async (req, res) => {
+    try {
+      await uploadAWS(req.body.orderId).fields([
+        { name: "primaryImage", maxCount: 1 },
+        { name: "thumbnailImage", maxCount: 1 },
+        { name: "additionalImages", maxCount: 10 }
+      ])(req, res, async (err) => {
+        if (err) {
+          return res.status(500).send("The order cannot be updated");
+        }
+  
+        const event = await updateOrder(req.body.orderId, req.body, req.files);
+        if (!event) {
+          return res.status(500).send("The order cannot be updated");
+        }
+  
+        res.send(event);
+      });
+    } catch (e) {
+      return res.status(500).send("The order cannot be updated");
+    }
+});
+
+router.get("/priority", async (req, res) => {
+  try {
+    const priorityOrders = await Order.find({ isDeleted: false, orderStatus:'Post Approved' })
+      .populate({
+        path: "selectedPackage",
+        match: { isPriority: true },
+        model: "ObituaryRemembarancePackages",
+      })
+      .sort({ createdAt: -1 });
+
+    const filteredOrders = priorityOrders.filter(order => order.selectedPackage !== null);
+
+    res.status(200).json({ orders: filteredOrders });
+  } catch (err) {
+    console.error("Error fetching priority orders:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/active-sorted", async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const orders = await Order.find({ isDeleted: false, orderStatus:'Post Approved' })
+      .populate("selectedPackage", "isPriority isFeature") 
+      .populate("selectedBgColor")
+      .populate("selectedPrimaryImageBgFrame")
+      .sort({ createdAt: -1 });
+
+    const sortedOrders = orders.sort((a, b) => {
+      const aPriority = a.selectedPackage?.isPriority ? 1 : 0;
+      const bPriority = b.selectedPackage?.isPriority ? 1 : 0;
+      const aFeature = a.selectedPackage?.isFeature ? 1 : 0;
+      const bFeature = b.selectedPackage?.isFeature ? 1 : 0;
+
+      if (bPriority !== aPriority) return bPriority - aPriority;
+      if (bFeature !== aFeature) return bFeature - aFeature;
+      return 0;
+    });
+
+    const paginatedOrders = sortedOrders.slice(skip, skip + limit);
+
+    res.status(200).json({
+      orders: paginatedOrders,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(sortedOrders.length / limit),
+        totalItems: sortedOrders.length,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching sorted priority orders:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+router.get("/all", verifyTokenAndAdmin, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+  
+      const orders = await Order.find({ isDeleted: false })
+      .populate("selectedPackage")
+      .populate("selectedBgColor")
+      .populate("selectedAddons")
+      .populate({
+        path: "finalPrice.country",
+        select: "currencyCode",
+      })
+      .populate("selectedPrimaryImageBgFrame")
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+  
+      const total = await Order.countDocuments({ isDeleted: false });
+  
+      res.status(200).json({
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+router.get(`/find/:userId`, verifyTokenAndAuthorization, async (req, res) => {
+  try {
+    const { type } = req.query;
+
+    if (!["obituary", "remembrance"].includes(type)) {
+      return res.status(400).json({
+        message: "Query parameter 'type' must be either 'obituary' or 'remembrance'.",
+      });
+    }
+
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const orders = await Order.find({ username: user.username, isDeleted: false })
+      .populate({
+        path: "selectedPackage",
+        model: "ObituaryRemembarancePackages",
+      })
+      .populate("selectedBgColor")
+      .populate("selectedAddons")
+      .populate({
+        path: "finalPrice.country",
+        select: "currencyCode",
+      })
+      .populate({
+        path: "basePackagePrice.country",
+        select: "currencyCode",
+      })
+      .populate("selectedPrimaryImageBgFrame")
+      .sort({ dateOrdered: -1 });
+
+    let filteredOrders;
+    if (type === "obituary") {
+      filteredOrders = orders.filter(order => order.selectedPackage?.isObituary === true);
+    } else {
+      filteredOrders = orders.filter(order => order.selectedPackage?.isRemembrance === true);
+    }
+
+    if (filteredOrders.length === 0) {
+      return res.status(404).json({ message: `No ${type} orders found.` });
+    }
+
+    res.status(200).json({
+      type,
+      count: filteredOrders.length,
+      orders: filteredOrders,
+    });
+  } catch (err) {
+    console.error("Error fetching orders by type:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+    const orderId = req.params.id;
+  
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).send("Invalid Order ID");
+    }
+  
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        return res.status(404).send("Order not found");
+      }
+      res.status(200).send(order);
+    } catch (error) {
+      res.status(500).send("Error retrieving the order");
+    }
+});
+
+router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const order = await Order.findByIdAndUpdate(
+        id,
+        { isDeleted: true }, 
+        { new: true }    
+      );
+  
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+  
+      res.status(200).json("Order marked as deleted");
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+});
+
+async function updateOrder(orderId, data, fileList) {
+  const safeToString = (val) => (val ? val.toString() : "");
+  
+  //const currency = "cad"; 
+  //const cToken = req.body.cToken;
+
+  if (
+    !data.username ||
+    !data.accountDetails ||
+    !data.contactDetails ||
+    !data.selectedPackage ||
+    !data.selectedCountry
+  ) {
+    throw new Error("Required fields missing: username, accountDetails, contactDetails, selectedPackage, selectedCountry");
+  }
+
+  try {
+    if (typeof data.accountDetails === "string") data.accountDetails = JSON.parse(data.accountDetails);
+    if (typeof data.information === "string") data.information = JSON.parse(data.information);
+    if (typeof data.selectedAddons === "string") data.selectedAddons = JSON.parse(data.selectedAddons);
+
+    if (typeof data.contactDetails === "string") {
+      data.contactDetails = JSON.parse(data.contactDetails);
+    }
+
+    if (Array.isArray(data.contactDetails) && typeof data.contactDetails[0] === "string") {
+      data.contactDetails = data.contactDetails.map(str => {
+        try {
+          return JSON.parse(str);
+        } catch {
+          throw new Error("Invalid JSON in contactDetails array items");
+        }
+      });
+    }
+    if (!Array.isArray(data.contactDetails)) {
+      throw new Error("contactDetails must be an array");
+    }
+
+  } catch (e) {
+    throw new Error("Invalid JSON format in fields");
+  }
+
+  const country = await Country.findOne({
+    _id: data.selectedCountry,
+    isActive: true,
+    isDeleted: false
+  });
+  if (!country) throw new Error("Invalid or inactive country selected");
+
+  if (!country._id) throw new Error("Country._id is missing");
+
+  const currencyCode = country.currencyCode;
+
+  const selectedPackage = await ObituaryRemembarancePackages.findOne({
+    _id: data.selectedPackage,
+    isActive: true,
+    isDeleted: false
+  }).populate(['bgColors', 'primaryImageBgFrames']);
+
+  if (!selectedPackage) throw new Error("Invalid or inactive package");
+
+  if (!selectedPackage.priceList || !Array.isArray(selectedPackage.priceList)) {
+    throw new Error("Selected package priceList is missing or invalid");
+  }
+
+  const packagePriceEntry = selectedPackage.priceList.find(p =>
+    safeToString(p.country) === safeToString(country._id)
+  );
+  if (!packagePriceEntry) throw new Error(`Package pricing not available for selected country`);
+
+  const basePackagePrice = {
+    country: country._id,
+    currencyCode: currencyCode,
+    price: packagePriceEntry.price,
+  };
+
+  const packageAddonIds = (selectedPackage.addons || []).map(id => safeToString(id));
+  const userAddonIds = Array.isArray(data.selectedAddons) ? data.selectedAddons.map(id => safeToString(id)) : [];
+  const combinedAddonIds = [...new Set([...packageAddonIds, ...userAddonIds])];
+
+  let addonsPrice = 0;
+  let addonsWithPrices = [];
+
+  if (combinedAddonIds.length > 0) {
+    const addons = await Addons.find({
+      _id: { $in: combinedAddonIds },
+      isActive: true,
+      isDeleted: false
+    });
+
+    addonsWithPrices = addons.map(addon => {
+      if (!addon.priceList || !Array.isArray(addon.priceList)) {
+        throw new Error(`Addon priceList missing or invalid for Addon ID: ${addon._id}`);
+      }
+
+      const priceEntry = addon.priceList.find(p =>
+        safeToString(p.country) === safeToString(country._id)
+      );
+      if (!priceEntry) {
+        throw new Error(`Addon pricing not available for selected country, Addon ID: ${addon._id}`);
+      }
+      return {
+        addonId: safeToString(addon._id),
+        country: country._id,
+        currencyCode: currencyCode,
+        price: priceEntry.price
+      };
+    });
+
+    addonsPrice = addonsWithPrices.reduce((sum, a) => sum + a.price, 0);
+  }
+
+  const finalPrice = {
+    country: country._id,
+    currencyCode: currencyCode,
+    price: basePackagePrice.price + addonsPrice
+  };
+
+  if (data.selectedBgColor) {
+    const validBgColorIds = (selectedPackage.bgColors || []).map(bg => safeToString(bg._id));
+    if (!validBgColorIds.includes(safeToString(data.selectedBgColor))) {
+      throw new Error("Selected background color is not valid for this package");
+    }
+  }
+
+  if (data.selectedPrimaryImageBgFrame) {
+    const validFrameIds = (selectedPackage.primaryImageBgFrames || []).map(f => safeToString(f._id));
+    if (!validFrameIds.includes(safeToString(data.selectedPrimaryImageBgFrame))) {
+      throw new Error("Selected primary image frame is not valid for this package");
+    }
+  }
+
+  const wordLimit = selectedPackage.wordLimit || 0;
+  const descriptionText =
+    data.information && typeof data.information.description === "string"
+      ? data.information.description
+      : "";
+
+  const countWords = (str) =>
+    str.trim().split(/\s+/).filter(Boolean).length;
+
+  const descriptionWordCount = countWords(descriptionText);
+
+  if (descriptionWordCount > wordLimit) {
+    throw new Error(
+      `Description exceeds the word limit of ${wordLimit}. Current word count: ${descriptionWordCount}`
+    );
+  }
+
+  const maxContacts = selectedPackage.noofContectDetails || 0;
+  if (data.contactDetails.length > maxContacts) {
+    throw new Error(`Maximum allowed contact details for this package is ${maxContacts}`);
+  }
+
+  const maxImages = selectedPackage.noofAdditionalImages || 0;
+  if ((data.additionalImages || []).length > maxImages) {
+    throw new Error(`Maximum allowed additional images for this package is ${maxImages}`);
+  }
+
+  /* const options = {
+    method: "POST",
+    url: "https://scl-sandbox.dev.clover.com/v1/charges",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${process.env.CLOVER_SECRET}`,
+    },
+    body: {
+      ecomind: "ecom",
+      metadata: { existingDebtIndicator: false },
+      amount: Math.round(totalCharge),
+      currency: currency,
+      source: cToken,
+    },
+    json: true,
+  };
+
+  const cloverResponse = await new Promise((resolve, reject) => {
+    request(options, (error, response, body) => {
+      if (error) return reject(error);
+      if (body.status !== "succeeded") return reject(new Error(body.error?.message || "Payment failed"));
+      resolve(body);
+    });
+  }); */
+
+
+  const updateData = {
+    username: data.username,
+    information: data.information || {},
+    accountDetails: data.accountDetails,
+    contactDetails: Array.isArray(data.contactDetails) ? data.contactDetails : [],
+    selectedPackage: data.selectedPackage,
+    selectedCountryName: country.name,
+    selectedAddons: combinedAddonIds,
+    selectedPrimaryImageBgFrame: data.selectedPrimaryImageBgFrame || null,
+    selectedBgColor: data.selectedBgColor || null,
+    isDeleted: false,
+    basePackagePrice,
+    finalPrice,
+    ...(fileList?.primaryImage?.[0] && { primaryImage: fileList.primaryImage[0].location }),
+    ...(fileList?.thumbnailImage?.[0] && { thumbnailImage: fileList.thumbnailImage[0].location }),
+    ...(fileList?.additionalImages && {
+      additionalImages: fileList.additionalImages.map((img) => img.location)
+    })
+  };
+
+  const updatedOrder = await Order.findByIdAndUpdate(orderId, updateData, { new: true });
+
+  try {
+    await sendOrderPlacedEmail(updatedOrder._id);
+  } catch (emailErr) {
+    console.error("Error sending order confirmation email:", emailErr.message);
+  }
+
+  return updatedOrder;
+
+}
+  
+function sanitizeBodyKeys(obj) {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [k.trim(), v])
+    );
+}
+
+module.exports = router;

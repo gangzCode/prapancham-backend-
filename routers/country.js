@@ -74,6 +74,7 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
     try {
       let country = new Country({
         name: { en: [], ta: [], si: [] },
+        currencyCode:"TEMP",
       });
   
       country = await country.save({ validateBeforeSave: false });
@@ -244,12 +245,14 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
 });
   
 async function updateCountry(countryId, data, fileList) {
-    if (!data.name) throw new Error("Name is required");
+    if (!data.name || !data.currencyCode) throw new Error("Name and  currency code is required");
 
     let name = data.name;
+    let currencyCode = data.currencyCode;
   
     const updateData = {
       name,
+      currencyCode,
       isActive: data.isActive !== undefined ? data.isActive : true,
       isDeleted: false,
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),

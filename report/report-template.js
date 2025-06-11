@@ -72,7 +72,6 @@ function jsPDFInvoiceTemplate(props) {
           fontSize: props.invoice?.row3?.style?.fontSize || 12,
         },
       },
-      taxRows: props.invoice?.taxRows || [],
     },
     footer: {
       text: props.footer?.text || "",
@@ -126,7 +125,7 @@ function jsPDFInvoiceTemplate(props) {
     let imageHeader = "";
     if (typeof window === "undefined") {
       /*imageHeader = param.logo.src;*/
-      let path_url = "public/staticImages/logo-loading.png",
+      let path_url = "public/staticImages/Prapancham-logo.png",
         format = "PNG";
       //format 'JPEG', 'PNG', 'WEBP'
       imageHeader = fs.readFileSync(path_url).toString("base64");
@@ -141,7 +140,7 @@ function jsPDFInvoiceTemplate(props) {
         param.logo.type,
         10 + param.logo.margin.left,
         currentHeight - 5 + param.logo.margin.top,
-        param.logo.width,
+        param.logo.width - 20,
         param.logo.height
       );
     else
@@ -328,7 +327,7 @@ function jsPDFInvoiceTemplate(props) {
     let maxHeight = Math.max(...getRowsHeight());
 
     //body borders
-    if (param.invoice.tableBodyBorder) addTableBodyBorder(maxHeight + 1);
+    if (param.invoice.tableBodyBorder) addTableBodyBorder(maxHeight + 3);
 
     let startWidth = 0;
     currentHeight += 2;
@@ -455,16 +454,7 @@ function jsPDFInvoiceTemplate(props) {
     doc.text(docWidth - 10, currentHeight, param.invoice.row3.col3, "right");
   }
   //#endregion
-
-  //#region taxrows
-  param.invoice.taxRows.forEach((tax) => {
-    currentHeight += pdfConfig.lineHeight;
-    doc.setFontSize(param.invoice.row3.style.fontSize);
-
-    doc.text(docWidth / 1.5, currentHeight, tax.col1, "right");
-    doc.text(docWidth - 25, currentHeight, tax.col2, "right");
-    doc.text(docWidth - 10, currentHeight, "", "right");
-  });
+  
   //#endregion
 
   doc.setTextColor(colorBlack);

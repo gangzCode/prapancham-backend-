@@ -4,83 +4,88 @@ const path = require("path");
 
 function generateReport(filename, order, isSave = false) {
   const OutputType = {
-    Save: "save", //save pdf as a file
-    DataUriString: "datauristring", //returns the data uri string
-    DataUri: "datauri", //opens the data uri in current window
-    DataUrlNewWindow: "dataurlnewwindow", //opens the data uri in new window
-    Blob: "blob", //return blob format of the doc,
-    ArrayBuffer: "arraybuffer", //return ArrayBuffer format
+    Save: "save",
+    DataUriString: "datauristring",
+    DataUri: "datauri",
+    DataUrlNewWindow: "dataurlnewwindow",
+    Blob: "blob",
+    ArrayBuffer: "arraybuffer",
   };
 
-  const shippingStr = (mode) => {
-    if (mode === "standard") {
-      return "Standard";
-    } else if (mode === "standard") {
-      return "Standard";
-    } else if (mode === "express") {
-      return "Express";
-    } else if (mode === "premium") {
-      return "Premium";
-    } else if (mode === "premiumPlus") {
-      return "Premium Plus";
-    }
-  };
-
-  const generateTableArray = () => {
-    let dataArray = [];
-    order.orderItems.forEach((item, index) => {
-      dataArray.push([
-        index + 1,
-        item.itemId.name,
-        item.variationName,
-        item.itemQuantity,
-        formatCurrency(item.itemPrice * item.itemQuantity),
-      ]);
-    });
-    return dataArray;
-  };
-
-  const generateTaxRows = () => {
-    const rows = order.taxes.map((tax) => {
-      return {
-        col1: `${tax.taxname} (${tax.percentage}%)`,
-        col2: formatCurrency(tax.amount),
-        //col3: 'ALL',
-        style: {
-          fontSize: 10, //optional, default 12
-        },
-      };
-    });
-
-    return rows;
-  };
-
-  const getGrandTotal = () => {
-    const subTotal = order.rawTotal - order.discounts;
-
-    const taxedTotal = order.taxes.reduce(
-      (total, currentTax) => total + currentTax.amount,
-      subTotal
-    );
-
-    return taxedTotal + order.shipping;
-  };
-
-  const formatCurrency = (value) => {
+  // Format currency helper
+  const formatCurrency = (value, currencyCode = "CAD") => {
     let formatter = new Intl.NumberFormat("en-GB", {
       style: "currency",
-      currency: "CAD",
+      currency: currencyCode,
     });
     return formatter.format(value);
   };
 
+  // Replace all helper (for cleaning address)
   function replaceAll(str, find, replace) {
     return str.replace(new RegExp(find, "g"), replace);
   }
 
-  let filePath = path.join(__dirname, "../public/staticImages/logo-loading.png");
+  // Generate addons string with prices
+  const selectedCountryId = order.basePackagePrice?.country || "";
+  const currencyCode = order.basePackagePrice?.currencyCode || "CAD";
 
-  let props = {
+  const processedAddons = order.selectedAddons?.length
+    ? order.selectedAddons
+        .map((addon) => {
+          const title = addon.name?.en?.[0]?.name || "N/A";
+          const priceObj = addon.priceList?.find(
+            (p) => p.country?.toString() === selectedCountryId._id?.toString()
+          );
+          const price = priceObj?.price || 0;
+          return `${title} (${formatCurrency(price, currencyCode)})`;
+        })
+        .join(", ")
+    : "None";
+
+  // Generate invoice table rows
+  const invoiceTable = [
+    ["1", "Username", order.username || "N/A"],
+    ["2", "Title", order.information?.title || "N/A"],
+    ["3", "Description", order.information?.description || "N/A"],
+    ["4", "Package", order.selectedPackage?.name?.en?.[0]?.name || "N/A"],
+    [
+      "5",
+      "Package Price",
+      formatCurrency(order.basePackagePrice?.price || 0, currencyCode),
+    ],
+    ["6", "Selected Addons", processedAddons],
+    [
+      "7",
+      "Final Price",
+      formatCurrency(order.finalPrice?.price || 0, currencyCode),
+    ],
+    ["8", "Order Status", order.orderStatus || "N/A"],
+  ];
+
+  // You can add tax rows here if order has taxes array like in 2nd example
+  const generateTaxRows = () => {
+    if (!order.taxes) return [];
+    return order.taxes.map((tax) => ({
+      col1: `${tax.taxname} (${tax.percentage}%)`,
+      col2: formatCurrency(tax.amount, currencyCode),
+      style: { fontSize: 10 },
+    }));
+  };
+
+  // Calculate subtotal, discount, shipping, grand total (if applicable)
+  // Adjust according to your order fields or mock values if not present
+  const subtotal = order.finalPrice?.price || 0;
+  const discounts = order.discounts || 0;
+  const shipping = order.shipping || 0;
+  const taxesTotal = order.taxes
+    ? order.taxes.reduce((sum, tax) => sum + tax.amount, 0)
+    : 0;
+  const grandTotal = subtotal - discounts + taxesTotal + shipping;
+
+  const filePath = path.join(__dirname, "../public/staticImages/logo-loading.png");
+
+  const props = {
     outputType: isSave ? OutputType.Save : OutputType.DataUriString,
     returnJsPDFDocObject: true,
     fileName: "report/generated_reports/" + filename,
@@ -88,102 +93,48 @@ function generateReport(filename, order, isSave = false) {
     compress: true,
     logo: {
       src: filePath,
-      type: "PNG", //optional, when src= data:uri (nodejs case)
-      width: 58.28, //aspect ratio = width/height
+      type: "PNG",
+      width: 58.28,
       height: 26.66,
-      margin: {
-        top: 0, //negative or positive num, from the current position
-        left: 0, //negative or positive num, from the current position
-      },
+      margin: { top: 0, left: 0 },
     },
     business: {
-      name: "Gadgets For Less",
+      name: "Prapancham",
       address: "5641 Steeles Ave E Unit 3, Scarborough, ON M1V 5P6",
       phone: "+1-416-291-9800",
-      email: "orders@gadgetforless.ca",
+      email: "orders@prapancham.ca",
     },
     contact: {
-      label: "Billing details:",
-      name: order.address.name,
+      label: "Primary Contact Details:",
+      name: order.username,
       address:
-        replaceAll(order.address.address, "\n", "") +
-        ", \n" +
-        order.address.town +
-        ", " +
-        order.address.state +
-        ", " +
-        countryList().getLabel(order.address.country) +
-        ", " +
-        order.address.postalCode,
-      phone: order.address.number,
-      email: order.address.email,
+        replaceAll(order.information?.address || "", "\n", "") || "",
+      phone: order.accountDetails?.accountNumber
+        ? order.accountDetails.accountNumber.toString()
+        : "",
+      email: order.accountDetails?.accountHolderName || "",
     },
     invoice: {
-      label: "Shipping: ",
-      num: shippingStr(order.delivery),
-      invDate: "Purchase Date: " + order.date.toLocaleString("en-US"),
-      invGenDate: "Invoice Date: " + new Date().toLocaleString("en-US"),
-      headerBorder: false,
-      tableBodyBorder: false,
+      label: "Order ID:",
+      num: order._id?.toString(),
+      invDate: "Order Date: " + (order.date ? order.date.toLocaleString() : ""),
+      invGenDate: "Invoice Date: " + new Date().toLocaleString(),
+      headerBorder: true,
+      tableBodyBorder: true,
       header: [
-        {
-          title: "#",
-          style: {
-            width: 10,
-          },
-        },
-        {
-          title: "Item Name",
-          style: {
-            width: 80,
-          },
-        },
-        /*{
-                    title: "Description",
-                    style: {
-                        width: 80
-                    }
-                },
-                { title: "Color"},*/
-        { title: "Variant" },
-        { title: "Quantity" },
-        { title: "Total" },
+        { title: "#", style: { width: 10 } },
+        { title: "Field", style: { width: 100 } },
+        { title: "Details" },
       ],
-      table: generateTableArray(),
-      invTotalLabel: "Grand Total:",
-      invTotal: formatCurrency(getGrandTotal()),
-      //invCurrency: "ALL",
+      table: invoiceTable,
       row1: {
-        col1: "Subtotal:",
-        col2: formatCurrency(order.rawTotal),
-        //col3: '%',
-        style: {
-          fontSize: 10, //optional, default 12
-        },
+        col1: "Grand Total:",
+        col2: formatCurrency(subtotal, currencyCode),
+        style: { fontSize: 10 },
       },
-      row2: {
-        col1: "Discount:",
-        col2: formatCurrency(order.discounts),
-        //col3: 'ALL',
-        style: {
-          fontSize: 10, //optional, default 12
-        },
-      },
-      row3: {
-        col1: "Shipping:",
-        col2: formatCurrency(order.shipping),
-        //col3: 'ALL',
-        style: {
-          fontSize: 10, //optional, default 12
-        },
-      },
-      taxRows: generateTaxRows(),
-
-      //invDescLabel: "Invoice Note",
-      //invDesc: "There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary.",
     },
     footer: {
-      text: "This is an electronically created invoice.",
+      text: "This is an electronically generated invoice for the obituary remembrance order.",
     },
     pageEnable: true,
     pageLabel: "Page ",

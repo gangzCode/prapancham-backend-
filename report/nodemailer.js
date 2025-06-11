@@ -2,8 +2,9 @@ const nodemailer = require("nodemailer");
 const generateReport = require("../report/generate-report");
 const fs = require("fs");
 const { User } = require("../models/user");
-const { Order } = require("../models/user");
-
+const { Order } = require("../models/order");
+const { Country } = require("../models/country");
+const { Addon } = require("../models/addons");
 const SMTP_HOST = process.env.SMTP_HOST;
 const SENDER_EMAIL = process.env.SENDER_EMAIL;
 const RECEIVER_EMAIL = process.env.RECEIVER_EMAIL;
@@ -56,25 +57,63 @@ async function sendContactUsEmail(name, email, contact, message) {
 async function sendOrderPlacedEmail(orderId) {
   try {
     const order = await Order.findById(orderId)
-      .populate("address")
-      .populate("orderItems.itemId", { _id: 1, name: 1, isNumericVariation: 1 });
-    let adminEmails = [];
-    const adminUsers = await User.find({ isAdmin: true });
-    for (let user of adminUsers) {
-      adminEmails.push(user.email);
+      .populate("selectedPackage")
+      .populate("selectedAddons")
+      .populate("basePackagePrice.country")
+      .populate("finalPrice.country")
+      .lean();
+
+    if (order.basePackagePrice?.country) {
+      order.basePackagePrice.currencyCode = order.basePackagePrice.country.currencyCode || "CAD";
     }
+
+    if (order.finalPrice?.country) {
+      order.finalPrice.currencyCode = order.finalPrice.country.currencyCode || "CAD";
+    }
+
+    if (order.selectedPackage?.prices?.length) {
+      const selectedCountryId = order.basePackagePrice.country._id.toString();
+
+      const pkgPrice = order.selectedPackage.prices.find(
+        (p) => p.country?.toString() === selectedCountryId
+      );
+
+      order.selectedPackage.price = pkgPrice?.price || 0;
+      order.selectedPackage.currencyCode = order.basePackagePrice.currencyCode;
+    }
+
+    order.selectedAddons = order.selectedAddons.map((addon) => {
+      const selectedCountryId = order.basePackagePrice.country._id.toString();
+
+      const priceObj = addon?.prices?.find(
+        (p) => p.country?.toString() === selectedCountryId
+      );
+
+      return {
+        ...addon,
+        price: priceObj?.price || 0,
+        currencyCode: order.basePackagePrice.currencyCode,
+      };
+    });
+
+    const adminUsers = await User.find({ isSuperAdmin: true });
+    const adminEmails = adminUsers.map((u) => u.email);
+
     const fsPromises = require("fs").promises;
     const path = require("path");
-    let fileName = order._id + ".pdf";
-    const filepath = path.resolve(__dirname, "./generated_reports/" + fileName);
-    let messageParams = {
+    const fileName = `${order._id}.pdf`;
+    const filepath = path.resolve(__dirname, "./generated_reports/", fileName);
+
+    const messageParams = {
       from: SENDER_EMAIL,
       to: order.username,
       bcc: adminEmails,
-      subject: "Order has been placed",
+      subject: "Your Purchase of Obituary Package is Successful & Your Obituary Post is Under Review",
       text: "Please find your invoice in attachments.",
     };
-    generateReport(fileName, order, true);
+
+    await generateReport(fileName, order, true);
+
     fsPromises
       .readFile(filepath)
       .then((data) => {
@@ -89,7 +128,6 @@ async function sendOrderPlacedEmail(orderId) {
         return transporter.sendMail(messageParams);
       })
       .then((response) => {
-        console.log(response);
         fs.unlink(filepath, (err) => {
           if (err) {
             console.error(err);

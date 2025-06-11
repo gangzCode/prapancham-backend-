@@ -28,12 +28,8 @@ const addonsSchema = mongoose.Schema({
     priceList:[
         {
             country: {
-                type: String,
-                required: true,
-            },
-            currencyCode: {
-                type: String,
-                required: true,
+               type: mongoose.Schema.Types.ObjectId,
+                ref: 'Country'
             },
             price: {
                 type: Number,
