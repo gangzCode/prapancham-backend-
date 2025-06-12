@@ -23,6 +23,10 @@ const orderSchema = mongoose.Schema(
             type: String,
             default: ''
         },
+        shortDescription: {
+            type: String,
+            default: ''
+        },
         description: {
             type: String,
             default: ''
