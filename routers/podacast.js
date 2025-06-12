@@ -230,6 +230,21 @@ router.get("/recent/:limit", async (req, res) => {
   }
 });
 
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = await Podcast.distinct('podcastCategory', {
+      podcastCategory: { $ne: null }, // exclude null
+      isDeleted: false,
+      isActive: true,
+    });
+
+    res.status(200).json({ success: true, categories });
+  } catch (error) {
+    console.error('Error fetching podcast categories:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   const podcastId = req.params.id;
 
