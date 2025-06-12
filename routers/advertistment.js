@@ -442,6 +442,7 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
   
     try {
       const advertisements = await Advertistment.find({ isDeleted: false })
+        .populate("adCategory")
         .skip(skip)
         .limit(limit)
         .sort({ uploadedDate: -1 });
