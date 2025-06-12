@@ -4,23 +4,23 @@ const youtubeNewsSchema = mongoose.Schema(
   {
     title: {
       en: [
-        {
-            name: { type: String,required: true },
-            value: { type: String,required: true }
-        }
-    ],
-    ta: [
-        {
-            name: { type: String, required: true },
-            value: { type: String, required: true}
-        }
-    ],
-    si: [
-        {
-            name: { type: String, required: true },
-            value: { type: String,required: true }
-        }
-    ]
+          {
+              name: { type: String,required: true },
+              value: { type: String,required: true }
+          }
+      ],
+      ta: [
+          {
+              name: { type: String, required: true },
+              value: { type: String, required: true}
+          }
+      ],
+      si: [
+          {
+              name: { type: String, required: true },
+              value: { type: String,required: true }
+          }
+      ]
     },
     description: {
       en: [
@@ -75,8 +75,24 @@ const youtubeNewsSchema = mongoose.Schema(
         required: false,
     },
     podcastCategory: {
-      type: String,
-      required: false,
+      en: [
+          {
+              name: { type: String,required: true },
+              value: { type: String,required: true }
+          }
+      ],
+      ta: [
+          {
+              name: { type: String, required: true },
+              value: { type: String, required: true}
+          }
+      ],
+      si: [
+          {
+              name: { type: String, required: true },
+              value: { type: String,required: true }
+          }
+      ]
     },
     isDeleted: {
       type: Boolean,

@@ -80,7 +80,7 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
       creatorName: { en: [], ta: [], si: [] },
       podcastLink:"TEMP",
       podcastRunTime:"TEMP",
-      podcastCategory:"TEMP"
+      podcastCategory:{ en: [], ta: [], si: [] },
     });
 
     podcast = await podcast.save({ validateBeforeSave: false });
@@ -298,6 +298,7 @@ async function updatePodcast(podcastId, data, fileList) {
   if (typeof title === "string") title = JSON.parse(title);
   if (typeof description === "string") description = JSON.parse(description);
   if (typeof creatorName === "string") creatorName = JSON.parse(creatorName);
+  if (typeof podcastCategory === "string") podcastCategory = JSON.parse(podcastCategory);
   } catch (e) {
   throw new Error("Invalid JSON in name, podcast link, podcast runtime or description, category");
   }
