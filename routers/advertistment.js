@@ -573,21 +573,24 @@ router.get("/by-category", async (req, res) => {
 });
   
 router.get("/:id", async (req, res) => {
-    const adId = req.params.id;
-  
-    if (!mongoose.isValidObjectId(adId)) {
-      return res.status(400).send("Invalid Advertisement ID");
+  const adId = req.params.id;
+
+  if (!mongoose.isValidObjectId(adId)) {
+    return res.status(400).send("Invalid Advertisement ID");
+  }
+
+  try {
+    const advertisement = await Advertistment.findById(adId)
+      .populate("adCategory")
+      .populate("adType");
+
+    if (!advertisement) {
+      return res.status(404).send("Advertisement not found");
     }
-  
-    try {
-      const advertisement = await Advertistment.findById(adId);
-      if (!advertisement) {
-        return res.status(404).send("Advertisement not found");
-      }
-      res.status(200).send(advertisement);
-    } catch (error) {
-      res.status(500).send("Error retrieving the advertisement");
-    }
+    res.status(200).send(advertisement);
+  } catch (error) {
+    res.status(500).send("Error retrieving the advertisement");
+  }
 });
 
 router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
@@ -608,7 +611,6 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
       res.status(500).json({ message: err.message });
     }
 });
-
   
 async function updateAdvertisement(adId, data, fileList) {
     if (!data.adType) throw new Error("Ad type is required");
