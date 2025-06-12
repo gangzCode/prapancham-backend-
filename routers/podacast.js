@@ -201,7 +201,7 @@ router.get('/', async (req, res) => {
     };
 
     if (category) {
-      filter.podcastCategory = category;
+      filter['podcastCategory.en.value'] = category;
     }
 
     const podcasts = await Podcast.find(filter).sort({ createdAt: -1 });
