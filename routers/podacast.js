@@ -195,22 +195,24 @@ router.get('/', async (req, res) => {
   const { category } = req.query;
 
   try {
-    if (!category) {
-      return res.status(400).json({ message: "Category is required in query" });
+    const filter = {
+      isDeleted: false,
+      isActive: true,
+    };
+
+    if (category) {
+      filter.podcastCategory = category;
     }
 
-    const podcasts = await Podcast.find({
-      podcastCategory: category,
-      isDeleted: false,
-      isActive: true
-    }).sort({ createdAt: -1 }); // Optional: sort newest first
+    const podcasts = await Podcast.find(filter).sort({ createdAt: -1 });
 
     res.json(podcasts);
   } catch (err) {
-    console.error('Error fetching podcasts by category:', err);
+    console.error('Error fetching podcasts:', err);
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
 
 router.get("/recent/:limit", async (req, res) => {
   const limit = parseInt(req.params.limit) || 5;
