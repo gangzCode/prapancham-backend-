@@ -277,6 +277,7 @@ router.get("/active", async (req, res) => {
   
     try {
       const news = await News.find({ isActive: true, isDeleted: false })
+        .populate("newsCategory")
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 });
@@ -305,6 +306,7 @@ router.get("/breaking-news/:limit", async (req, res) => {
       isDeleted: false,
       isBreakingNews: true,
     })
+      .populate("newsCategory")
       .sort({ createdAt: -1 })
       .limit(limit);
 
@@ -324,6 +326,7 @@ router.get("/important-news/:limit", async (req, res) => {
       isDeleted: false,
       isImportantNews: true,
     })
+      .populate("newsCategory")
       .sort({ createdAt: -1 })
       .limit(limit);
 
@@ -342,6 +345,7 @@ router.get("/recent/:limit", async (req, res) => {
       isActive: true,
       isDeleted: false,
     })
+      .populate("newsCategory")
       .sort({ createdAt: -1 })
       .limit(limit);
 
@@ -364,6 +368,7 @@ router.get("/grouped-by-category", async (req, res) => {
         isDeleted: false,
         isActive: true,
       })
+        .populate("newsCategory")
         .sort({ createdAt: -1 })
         .limit(3);
 
