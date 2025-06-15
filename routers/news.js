@@ -418,14 +418,29 @@ router.get("/by-category/:categoryId", async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
   const { categoryId } = req.params;
+  const { createdAt } = req.query;
+
+  const filter = {
+    isDeleted: false,
+    newsCategory: categoryId,
+  };
+
+  // Filter by specific createdAt date (ignores time)
+  if (createdAt) {
+    const start = new Date(createdAt);
+    const end = new Date(createdAt);
+    end.setUTCHours(23, 59, 59, 999);
+    start.setUTCHours(0, 0, 0, 0);
+    filter.createdAt = { $gte: start, $lte: end };
+  }
 
   try {
-    const news = await News.find({ isDeleted: false, newsCategory: categoryId })
+    const news = await News.find(filter)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
 
-    const total = await News.countDocuments({ isDeleted: false, newsCategory: categoryId });
+    const total = await News.countDocuments(filter);
 
     res.status(200).json({
       data: news,
