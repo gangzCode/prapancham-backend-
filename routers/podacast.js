@@ -208,29 +208,34 @@ router.get('/categories', async (req, res) => {
 
 router.get('/:name?', async (req, res) => {
   try {
-    const categoryName = req.params.name;
+    const categoryName = req.params.name?.trim();
 
-    let query = {
+    const query = {
       isDeleted: false,
       isActive: true,
     };
 
-    if (categoryName) {
-      query['podcastCategory.en.value'] = categoryName;
-    }
-
     const podcasts = await Podcast.find(query);
 
-    if (!podcasts.length) {
-      return res.status(404).json({
-        success: false,
-        message: categoryName
-          ? 'No podcasts found for this category'
-          : 'No active podcasts found',
-      });
+    if (!categoryName) {
+      return res.status(200).json({ success: true, podcasts });
     }
 
-    res.status(200).json({ success: true, podcasts });
+    const normalizedCategory = categoryName.replace(/\W/g, "").toLowerCase();
+
+    const filtered = podcasts.filter(podcast => {
+      const categories = podcast.podcastCategory?.en || [];
+      return categories.some(cat =>
+        cat.value && cat.value.replace(/\W/g, "").toLowerCase() === normalizedCategory
+      );
+    });
+
+    if (!filtered.length) {
+      return res.status(404).json({ success: false, message: 'No podcasts found for this category' });
+    }
+
+    res.status(200).json({ success: true, podcasts: filtered });
+
   } catch (error) {
     console.error('Error fetching podcasts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
