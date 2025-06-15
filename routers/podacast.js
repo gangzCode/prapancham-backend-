@@ -191,28 +191,30 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
-  const { category } = req.query;
-
+router.get('/:name', async (req, res) => {
   try {
-    const filter = {
-      isDeleted: false,
-      isActive: true,
-    };
+    const categoryName = req.params.name;
 
-    if (category) {
-      filter['podcastCategory.en.value'] = category;
+    if (!categoryName) {
+      return res.status(400).json({ success: false, message: 'Category name is required' });
     }
 
-    const podcasts = await Podcast.find(filter).sort({ createdAt: -1 });
+    const podcasts = await Podcast.find({
+      isDeleted: false,
+      isActive: true,
+      'podcastCategory.en.value': categoryName
+    });
 
-    res.json(podcasts);
-  } catch (err) {
-    console.error('Error fetching podcasts:', err);
-    res.status(500).json({ message: "Internal server error" });
+    if (!podcasts.length) {
+      return res.status(404).json({ success: false, message: 'No podcasts found for this category' });
+    }
+
+    res.status(200).json({ success: true, podcasts });
+  } catch (error) {
+    console.error('Error fetching podcasts by category:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
-
 
 router.get("/recent/:limit", async (req, res) => {
   const limit = parseInt(req.params.limit) || 5;
