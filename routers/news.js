@@ -438,6 +438,7 @@ router.get("/by-category/:categoryId", async (req, res) => {
     const news = await News.find(filter)
       .skip(skip)
       .limit(limit)
+      .populate("newsCategory")
       .sort({ createdAt: -1 });
 
     const total = await News.countDocuments(filter);
