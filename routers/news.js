@@ -462,12 +462,43 @@ router.get("/:id", async (req, res) => {
   }
 
   try {
-    const news = await News.findById(newsId);
+    // 1. Get the requested news item
+    const news = await News.findById(newsId).populate("newsCategory");
     if (!news) {
       return res.status(404).send("News not found");
     }
-    res.status(200).send(news);
+
+    const categoryId = news.newsCategory?._id;
+
+    // 2. Find 3 other news from the same category (excluding the current one)
+    const relatedNews = await News.find({
+      _id: { $ne: news._id },
+      newsCategory: categoryId,
+      isDeleted: false,
+      isActive: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(3);
+
+    // 3. Find 3 news from a different category
+    const differentCategoryNews = await News.find({
+      _id: { $ne: news._id },
+      newsCategory: { $ne: categoryId },
+      isDeleted: false,
+      isActive: true,
+    })
+      .populate("newsCategory")
+      .sort({ createdAt: -1 })
+      .limit(3);
+
+    res.status(200).json({
+      success: true,
+      news,
+      relatedNews,
+      differentCategoryNews,
+    });
   } catch (error) {
+    console.error("Error retrieving the news:", error);
     res.status(500).send("Error retrieving the news");
   }
 });
