@@ -477,6 +477,7 @@ router.get("/:id", async (req, res) => {
       isDeleted: false,
       isActive: true,
     })
+      .populate("newsCategory")
       .sort({ createdAt: -1 })
       .limit(3);
 
