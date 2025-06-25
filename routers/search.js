@@ -1,30 +1,69 @@
-// const express = require('express');
-// const {Product} = require("../models/product");
-// const router = express.Router();
+const express = require('express');
+const {Order} = require("../models/order");
+const {Event} = require("../models/event");
+const {News} = require("../models/news");
+const router = express.Router();
 
-// router.get('/quickSearch/:terms', async (req, res) => {
-//     try {
-//         const term = req.params.terms;
-//         const products = await Product.find(
-//             {
-//                 $or: [
-//                     {'name': {"$regex": term, "$options": "i"}},
-//                     {'description': {"$regex": term, "$options": "i"}},
-//                     {'richDescription': {"$regex": term, "$options": "i"}},
-//                     /*{'brand': {"$regex": term, "$options": "i"}},
-//                     {'filterList': {"$regex": term, "$options": "i"}},*/
-//                 ]
-//             },
-//             {_id: 1, name: 1, price: 1, discountedPrice: 1, image: 1, imageAlt: 1, description: 1,variations:1}
-//         ).sort({_id: -1}).limit(6);
-//         if (!products) {
-//             return res.status(500).json({success: false})
-//         }
-//         res.send(products);
-//     } catch (e) {
-//         console.error(e)
-//         return res.status(500).json({success: false})
-//     }
-// })
+router.get("/", async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.trim().length === 0) {
+    return res.status(400).json({ message: "Search query 'q' is required" });
+  }
 
-// module.exports = router;
+  const searchRegex = new RegExp(q, "i");
+
+  try {
+    const orders = await Order.find({
+      isDeleted: false,
+      $or: [
+        { "information.title": searchRegex },
+        { "information.shortDescription": searchRegex },
+        { "information.description": searchRegex },
+        { "contactDetails.name": searchRegex },
+        { "contactDetails.country": searchRegex },
+        { "contactDetails.address": searchRegex },
+        { "contactDetails.relationship": searchRegex },
+      ]
+    });
+
+    const news = await News.find({
+      isDeleted: false,
+      $or: [
+        { "title.en.value": searchRegex },
+        { "title.ta.value": searchRegex },
+        { "title.si.value": searchRegex },
+        { "description.en.value": searchRegex },
+        { "description.ta.value": searchRegex },
+        { "description.si.value": searchRegex },
+        { "editorName.en.value": searchRegex },
+        { "editorName.ta.value": searchRegex },
+        { "editorName.si.value": searchRegex },
+      ]
+    });
+
+    const events = await Event.find({
+      isDeleted: false,
+      $or: [
+        { "name.en.value": searchRegex },
+        { "name.ta.value": searchRegex },
+        { "name.si.value": searchRegex },
+        { "description.en.value": searchRegex },
+        { "description.ta.value": searchRegex },
+        { "description.si.value": searchRegex },
+      ]
+    });
+
+    res.json({
+      query: q,
+      orders,
+      news,
+      events,
+    });
+  } catch (error) {
+    console.error("Search error:", error.message);
+    res.status(500).json({ message: "Server error during search" });
+  }
+});
+
+
+module.exports = router;

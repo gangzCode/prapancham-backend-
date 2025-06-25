@@ -46,6 +46,7 @@ const quotesRoutes = require("./routers/quotes");
 const youtubeNewsRoutes = require("./routers/youtubeNews");
 const orderRoutes = require("./routers/orders");
 const podcastRoutes = require("./routers/podacast");
+const searchRoutes = require("./routers/search");
 
 const api = process.env.API_URL;
 
@@ -64,6 +65,7 @@ app.use(`${api}/quotes`, quotesRoutes);
 app.use(`${api}/youtube-news`, youtubeNewsRoutes);
 app.use(`${api}/order`, orderRoutes);
 app.use(`${api}/podcast`, podcastRoutes);
+app.use(`${api}/search`, searchRoutes);
 
 app.get('/', (req,res,next) =>{
     res.send("hello gangez")
@@ -99,7 +101,7 @@ connectToDB();
 
 /* app.listen(PORT, () => {
   console.log('server is running http://localhost:4000');
-});
- */
+}); */
+
 
 module.exports = app;
