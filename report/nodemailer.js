@@ -3,6 +3,7 @@ const generateReport = require("../report/generate-report");
 const fs = require("fs");
 const { User } = require("../models/user");
 const { Order } = require("../models/order");
+const { AdminUser } = require("../models/adminUser");
 const { Country } = require("../models/country");
 const { Addon } = require("../models/addons");
 const SMTP_HOST = process.env.SMTP_HOST;
@@ -144,21 +145,11 @@ async function sendOrderPlacedEmail(orderId) {
 
 async function sendOrderUpdateEmail(orderId) {
   try {
-    const order = await Order.findById(orderId)
-      .populate("address")
-      .populate("orderItems.itemId", { _id: 1, name: 1, isNumericVariation: 1 });
+    const order = await Order.findById(orderId);
 
-    const statusEnum = {
-      P: "Pending",
-      PR: "Processing",
-      S: "Shipped",
-      D: "Delivered",
-      F: "Completed",
-      C: "Cancelled",
-    };
 
     let adminEmails = [];
-    const adminUsers = await User.find({ isAdmin: true });
+    const adminUsers = await AdminUser.find({ isAdmin: true });
     for (let user of adminUsers) {
       adminEmails.push(user.email);
     }
@@ -167,12 +158,16 @@ async function sendOrderUpdateEmail(orderId) {
       from: SENDER_EMAIL,
       to: order.username,
       bcc: adminEmails,
-      subject: "Order has been updated",
+      subject: "Prapancham Obituary Order Status Has Been Updated",
       html: `
-        <div>Your order status has been updated to ${statusEnum[order.status]}</div>
+        <div>Dear Customer,</div>
         <div></div>
         <div></div>
-        <div>Thank you</div>
+        <div>Your order status has been updated to ${order.orderStatus}</div>
+        <div></div>
+        <div></div>
+        <div>Best Regards,</div>
+        <div>Prapancham</div>
       `,
     };
 

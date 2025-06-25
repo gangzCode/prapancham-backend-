@@ -58,13 +58,24 @@ const orderSchema = mongoose.Schema(
                         required: true,
         }, 
     },
+    finalPriceInCAD: {
+        price: {
+          type: Number,
+          min: 0,
+          required: false,
+        },
+        currencyCode: {
+          type: String,
+          default: 'CAD',
+        }
+    },      
     accountDetails:{
         bankName: {
             type: String,
             default: '',
             required: true
         },
-        bank: {
+        branchName: {
             type: String,
             default: '',
             required: true
@@ -135,6 +146,12 @@ const orderSchema = mongoose.Schema(
             default: ''
         }
     ],
+    slideshowImages: [
+        {
+            type: String,
+            default: ''
+        }
+    ],
     isDeleted: {
         type: Boolean,
         default: false,
@@ -149,10 +166,19 @@ const orderSchema = mongoose.Schema(
     },
     orderStatus: {
         type: String,
-        enum: ['Review Requested', 'Post Approved', 'Approval Denied', 'Requested for Changes'],
+        enum: ['Review Requested', 'Post Approved', 'Approval Denied', 'Requested for Changes','Expired'],
         required: true, 
         default: 'Review Requested'
-    }   
+    },
+    tributeItems: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'TributeItem'
+    }],
+    expiryDate: {
+      type: String,
+      required:true,
+      default: ''
+    },
   },
   { timestamps: true }
 );
