@@ -179,6 +179,54 @@ const orderSchema = mongoose.Schema(
       required:true,
       default: ''
     },
+    recievedDonations: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Donation'
+    }],
+    donationRecieved: {
+        price: {
+            type: Number,
+            min: 0,
+            required: false,
+        },
+        currencyCode: {
+            type: String,
+            default: 'CAD',
+        }
+    },
+    donationGivenBack: {
+        price: {
+            type: Number,
+            min: 0,
+            required: false,
+        },
+        currencyCode: {
+            type: String,
+            default: 'CAD',
+        }
+    },
+    memoryImageMoneyRecieved: {
+        price: {
+            type: Number,
+            min: 0,
+            required: false,
+        },
+        currencyCode: {
+            type: String,
+            default: 'CAD',
+        }
+    },
+    flowerMoneyRecieved: {
+        price: {
+            type: Number,
+            min: 0,
+            required: false,
+        },
+        currencyCode: {
+            type: String,
+            default: 'CAD',
+        }
+    },
   },
   { timestamps: true }
 );
