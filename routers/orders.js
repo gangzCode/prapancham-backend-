@@ -308,6 +308,49 @@ router.get("/country-order-count", async (req, res) => {
   }
 });
 
+router.get('/by-selected-country/:countryId', async (req, res) => {
+  const { countryId } = req.params;
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  if (!mongoose.isValidObjectId(countryId)) {
+    return res.status(400).send("Invalid country ID");
+  }
+
+  try {
+    const filter = {
+      orderStatus: "Post Approved",
+      selectedCountry: countryId,
+      isDeleted: false,
+    };
+
+    const [orders, totalCount] = await Promise.all([
+      Order.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return res.status(200).json({
+      orders,
+      pagination: {
+        totalItems: totalCount,
+        currentPage: page,
+        totalPages,
+        pageSize: limit,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error.message);
+    return res.status(500).send("Internal server error");
+  }
+});
+
 router.post('/search', async (req, res) => {
   const { title } = req.body;
 
@@ -595,8 +638,6 @@ router.post("/donation", async (req, res) => {
         if (!result || typeof result.result !== "number") {
           throw new Error("Currency conversion failed: Invalid response");
         }
-
-        console.log('exchange response', result);
 
         finalPriceInCAD = {
           price: result.result,
@@ -970,6 +1011,7 @@ try {
     accountDetails: data.accountDetails,
     contactDetails: Array.isArray(data.contactDetails) ? data.contactDetails : [],
     selectedPackage: data.selectedPackage,
+    selectedCountry: data.selectedCountry,
     selectedCountryName: country.name,
     selectedAddons: combinedAddonIds,
     selectedPrimaryImageBgFrame: data.selectedPrimaryImageBgFrame || null,
