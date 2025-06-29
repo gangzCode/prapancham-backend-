@@ -609,7 +609,9 @@ router.post("/donation", async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(finalPriceInCAD.price * 100),
       currency: "cad",
-      payment_method_types: ['card'],
+      automatic_payment_methods: {
+        enabled: true,
+      },
        metadata: {
           orderId: orderId ? orderId.toString() : "N/A",
           donor: email || name || "Anonymous",
