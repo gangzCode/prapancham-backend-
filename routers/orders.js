@@ -586,9 +586,9 @@ router.post("/donation", async (req, res) => {
 
     if (currencyCode.toLowerCase() !== "cad") {
       try {
-        //const url = `https://api.exchangerate.host/convert?from=${currencyCode}&to=CAD&amount=${donationAmount}`;
+        const url = `https://api.exchangerate.host/convert?from=${currencyCode}&to=CAD&amount=${donationAmount}`;
 
-        const url = `https://api.exchangerate.host/convert?from=${currencyCode}&to=CAD&amount=${donationAmount}&access_key=0ab9aa457e3235237a7aff525c1431e3`;
+        //const url = `https://api.exchangerate.host/convert?from=${currencyCode}&to=CAD&amount=${donationAmount}&access_key=0ab9aa457e3235237a7aff525c1431e3`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`Exchange API error: ${response.status} ${response.statusText}`);
