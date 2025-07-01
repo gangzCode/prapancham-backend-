@@ -387,7 +387,8 @@ router.post('/filter', async (req, res) => {
     } = req.body;
 
     const matchQuery = {
-      orderStatus: "Post Approved"
+      orderStatus: "Post Approved",
+      isDeleted: false
     };
 
     const lookupPipeline = [
@@ -402,16 +403,56 @@ router.post('/filter', async (req, res) => {
       { $unwind: '$packageDetails' }
     ];
 
-    const matchFlags = {};
-    if (isPriority !== undefined) matchFlags['packageDetails.isPriority'] = isPriority;
-    if (isRemembarace !== undefined) matchFlags['packageDetails.isRemembarace'] = isRemembarace;
-    if (isObituary !== undefined) matchFlags['packageDetails.isObituary'] = isObituary;
-    if (isFeatured !== undefined) matchFlags['packageDetails.isFeatured'] = isFeatured;
+    const matchFlags = [];
+
+    if (isPriority !== undefined) {
+      matchFlags.push({
+        $expr: {
+          $eq: [
+            { $ifNull: ["$packageDetails.isPriority", false] },
+            isPriority
+          ]
+        }
+      });
+    }
+
+    if (isRemembarace !== undefined) {
+      matchFlags.push({
+        $expr: {
+          $eq: [
+            { $ifNull: ["$packageDetails.isRemembarace", false] },
+            isRemembarace
+          ]
+        }
+      });
+    }
+
+    if (isObituary !== undefined) {
+      matchFlags.push({
+        $expr: {
+          $eq: [
+            { $ifNull: ["$packageDetails.isObituary", false] },
+            isObituary
+          ]
+        }
+      });
+    }
+
+    if (isFeatured !== undefined) {
+      matchFlags.push({
+        $expr: {
+          $eq: [
+            { $ifNull: ["$packageDetails.isFeatured", false] },
+            isFeatured
+          ]
+        }
+      });
+    }
 
     const aggregateQuery = [
       { $match: matchQuery },
       ...lookupPipeline,
-      { $match: matchFlags },
+      ...(matchFlags.length > 0 ? [{ $match: { $and: matchFlags } }] : []),
       {
         $facet: {
           data: [
