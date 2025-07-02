@@ -563,55 +563,56 @@ async function updateLetterTemplate(letterTemplateId,body,fileList) {
 }
 
 async function updateFlowerType(flowerTypeId, body, fileList) {
+  if (!body.name || typeof body.name !== "string" || body.name.trim() === "") {
+    throw new Error("The 'name' field is required and must be a non-empty string.");
+  }
 
-    if (!body.name || typeof body.name !== "string" || body.name.trim() === "") {
-        throw new Error("The 'name' field is required and must be a non-empty string.");
-    }
-    
-    let parsedPriceList = [];
+  let parsedPriceList = [];
 
-    if (typeof body.priceList === "string") {
+  if (typeof body.priceList === "string") {
     try {
-        parsedPriceList = JSON.parse(body.priceList);
+      parsedPriceList = JSON.parse(body.priceList);
     } catch {
-        throw new Error("Invalid JSON format in 'priceList'");
+      throw new Error("Invalid JSON format in 'priceList'");
     }
-    } else if (Array.isArray(body.priceList)) {
+  } else if (Array.isArray(body.priceList)) {
     parsedPriceList = body.priceList;
-    } else {
+  } else {
     throw new Error("The 'priceList' must be provided as a JSON string or an array.");
-    }
+  }
 
-    if (
+  if (
     !Array.isArray(parsedPriceList) ||
     parsedPriceList.length === 0 ||
-    !parsedPriceList.every(
-        item =>
-        item.country &&
-        item.currencyCode &&
-        typeof item.price === "number" &&
-        item.price >= 0
+    !parsedPriceList.every(item =>
+      mongoose.isValidObjectId(item.country) &&
+      typeof item.price === "number" &&
+      item.price >= 0
     )
-    ) {
-    throw new Error("The 'priceList' must be a non-empty array of valid price objects.");
-    }
-    
-    const updateData = {
-      isDeleted: false,
-      isActive: body.isActive !== undefined ? body.isActive : true,
-      name: body.name,
-      ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
-      priceList: parsedPriceList
-    };
-  
-    const updatedFlowerType = await TributeFlowerType.findByIdAndUpdate(
-      flowerTypeId,
-      updateData,
-      { new: true, runValidators: true }
-    );
-  
-    return updatedFlowerType;
-}  
+  ) {
+    throw new Error("The 'priceList' must be a non-empty array with valid 'country' ObjectIds and 'price' values.");
+  }
+
+  const updateData = {
+    name: body.name,
+    isDeleted: false,
+    isActive: body.isActive !== undefined ? body.isActive : true,
+    priceList: parsedPriceList,
+    ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
+  };
+
+  const updatedFlowerType = await TributeFlowerType.findByIdAndUpdate(
+    flowerTypeId,
+    updateData,
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedFlowerType) {
+    throw new Error("Flower type not found or could not be updated.");
+  }
+
+  return updatedFlowerType;
+} 
   
 function sanitizeBodyKeys(obj) {
     return Object.fromEntries(

@@ -17,18 +17,14 @@ const tributeFlowerTypeSchema = mongoose.Schema(
     priceList:[
       {
           country: {
-              type: String,
-              required: true,
-          },
-          currencyCode: {
-              type: String,
-              required: true,
-          },
-          price: {
-              type: Number,
-              min: 0,
-              required: true,
-          }, 
+                         type: mongoose.Schema.Types.ObjectId,
+                          ref: 'Country'
+                      },
+                      price: {
+                          type: Number,
+                          min: 0,
+                          required: true,
+                      }, 
       }
     ],
     isActive: {
