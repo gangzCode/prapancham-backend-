@@ -644,18 +644,15 @@ router.get("/tribute/all", verifyTokenAndAdmin, async (req, res) => {
 
 router.delete("/tribute/:tributeId", async (req, res) => {
   try {
-    // First, find the tribute by ID to get the linked orderId
     const tribute = await TributeItem.findOne({ _id: req.params.tributeId, isDeleted: false });
 
     if (!tribute) {
       return res.status(404).send("Tribute not found or already deleted");
     }
 
-    // 1. Soft delete the tribute
     tribute.isDeleted = true;
     await tribute.save();
 
-    // 2. Remove tribute reference from the order's tributeItems array
     await Order.findByIdAndUpdate(tribute.order, {
       $pull: { tributeItems: tribute._id }
     });
@@ -809,6 +806,68 @@ router.post("/donation", async (req, res) => {
   } catch (err) {
     console.error("Donation error:", err.message);
     return res.status(500).send(`Failed to process donation: ${err.message}`);
+  }
+});
+
+router.put("/donation/:id", verifyTokenAndAdmin, async (req, res) => {
+  const donationId = req.params.id;
+  const { newStatus } = req.body;
+
+  const validStatuses = [
+    "Donation Recieved",
+    "Donation Refunded",
+  ];
+
+  if (!mongoose.Types.ObjectId.isValid(donationId)) {
+    return res.status(400).send("Invalid donation ID");
+  }
+
+  if (!validStatuses.includes(newStatus)) {
+    return res.status(400).send("Invalid adminDonationStatus value");
+  }
+
+  try {
+    const donation = await Donation.findById(donationId);
+    if (!donation || donation.isDeleted) {
+      return res.status(404).send("Donation not found or already deleted");
+    }
+
+    if (donation.adminDonationStatus === newStatus) {
+      return res.status(200).json({ message: "No update required" });
+    }
+
+    donation.adminDonationStatus = newStatus;
+    await donation.save();
+
+    if (newStatus === "Donation Refunded" && donation.order) {
+      const order = await Order.findById(donation.order);
+      if (order) {
+        order.recievedDonations = order.recievedDonations.filter(
+          (dId) => dId.toString() !== donation._id.toString()
+        );
+
+        const deductionAmount = donation.finalPriceInCAD?.price || 0;
+        if (
+          order.donationRecieved &&
+          typeof order.donationRecieved.price === "number"
+        ) {
+          order.donationRecieved.price = Math.max(
+            0,
+            order.donationRecieved.price - deductionAmount
+          );
+        }
+
+        await order.save();
+      }
+    }
+
+    return res.status(200).json({
+      message: `Donation status updated to "${newStatus}"`,
+      donationId: donation._id,
+    });
+  } catch (err) {
+    console.error("Status update error:", err.message);
+    return res.status(500).send("Failed to update donation status");
   }
 });
 

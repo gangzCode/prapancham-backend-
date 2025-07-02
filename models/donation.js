@@ -46,15 +46,9 @@ const donationSchema = mongoose.Schema(
     },
     adminDonationStatus: {
         type: String,
-        enum: ['Donation Recieved', 'Donation Given To User','Unable to Send Donation to User'],
+        enum: ['Donation Recieved','Donation Refunded'],
         required: true, 
         default: 'Donation Recieved'
-    },
-    userDonationStatus: {
-        type: String,
-        enum: ['Donation Needs To Be Sent', 'Donation Sent To User', 'Donation Recieved By User'],
-        required: true, 
-        default: 'Donation Needs To Be Sent'
     },
     order:{
             type: mongoose.Schema.Types.ObjectId,
