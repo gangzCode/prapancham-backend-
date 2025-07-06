@@ -103,7 +103,7 @@ router.put("/ad-type/:id", verifyTokenAndAdmin, async (req, res) => {
     }
 });
 
-router.get("/ad-type/active", verifyTokenAndAdmin, async (req, res) => {
+router.get("/ad-type/active", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
