@@ -18,7 +18,10 @@ const { S3Client } = require("@aws-sdk/client-s3");
 const { sendOrderPlacedEmail,sendOrderUpdateEmail } = require("../report/nodemailer");
 const axios = require("axios");
 const Stripe = require("stripe");
-
+const fs = require('fs');
+const path = require('path');
+const generateReport = require('../report/generate-report');
+const PDFDocument = require("pdfkit");
 
 dotenv.config();
 
@@ -269,7 +272,7 @@ router.get(`/find/:userId`, verifyTokenAndAuthorization, async (req, res) => {
 
 router.get("/country-order-count", async (req, res) => {
   try {
-    const countries = await Country.find({}, "_id name image currencyCode");
+    const countries = await Country.find({isDeleted: false}, "_id name image currencyCode");
 
     const orderCounts = await Order.aggregate([
       {
@@ -483,6 +486,17 @@ router.post('/filter', async (req, res) => {
   } catch (error) {
     console.error("Filter Error:", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.post(`/printReportForAdmin`, verifyTokenAndAdmin, async (req, res) => {
+  try {
+    await generateAndDownloadReport(req, res);
+  } catch (e) {
+    console.error(e);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false });
+    }
   }
 });
 
@@ -1496,6 +1510,54 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
   }
 
   return result;
+}
+
+async function generateAndDownloadReport(req, res) {
+  try {
+    const order = await Order.findById(req.body.orderId)
+      .populate("selectedPackage")
+      .populate("selectedAddons")
+      .populate("basePackagePrice.country")
+      .populate("finalPrice.country")
+      .lean();
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const fileName = `${req.body.orderId}.pdf`;
+    const filePath = await generateReport(fileName, order);
+
+    // Ensure filePath is a string
+    if (typeof filePath !== "string") {
+      throw new Error("Expected file path to be a string");
+    }
+
+    const stream = fs.createReadStream(filePath); // ✅ filePath must be string
+    const downloadFileName = "order-invoice.pdf";
+
+    res.setHeader("Content-Disposition", `attachment; filename="${downloadFileName}"`);
+    res.setHeader("Content-Type", "application/pdf");
+
+    stream.pipe(res);
+
+    stream.on("end", () => {
+      fs.unlink(filePath, (err) => {
+        if (err) console.error("File deletion error:", err);
+      });
+    });
+
+    stream.on("error", (err) => {
+      console.error("Stream error:", err);
+      res.destroy(err);
+    });
+
+  } catch (e) {
+    console.error("Report generation error:", e);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  }
 }
   
 function sanitizeBodyKeys(obj) {

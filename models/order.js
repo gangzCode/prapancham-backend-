@@ -166,7 +166,7 @@ const orderSchema = mongoose.Schema(
     },
     orderStatus: {
         type: String,
-        enum: ['Review Requested', 'Post Approved', 'Approval Denied', 'Requested for Changes','Expired'],
+        enum: ['Review Requested', 'Post Approved', 'Approval Denied', 'Requested for Changes','Expired','Refunded'],
         required: true, 
         default: 'Review Requested'
     },
@@ -204,6 +204,12 @@ const orderSchema = mongoose.Schema(
             type: String,
             default: 'CAD',
         }
+    },
+    userDonationStatus: {
+            type: String,
+            enum: ['Donation Needs To Be Sent', 'Donation Sent To User', 'Donation Recieved By User'],
+            required: true, 
+            default: 'Donation Needs To Be Sent'
     },
     memoryImageMoneyRecieved: {
         price: {
