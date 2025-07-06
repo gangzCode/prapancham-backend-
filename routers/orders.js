@@ -509,9 +509,9 @@ router.get("/:id", async (req, res) => {
   
     try {
       const order = await Order.findById(orderId)
-        .populate("tributeItems");
-        .populate("selectedBgColor");
-        .populate("selectedPackage");
+        .populate("tributeItems")
+        .populate("selectedBgColor")
+        .populate("selectedPackage")
         .populate("selectedPrimaryImageBgFrame");
       if (!order) {
         return res.status(404).send("Order not found");
