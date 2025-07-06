@@ -532,44 +532,43 @@ router.get("/by-ad-type-ad-page", async (req, res) => {
 });
 
 router.get("/by-category", async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const { adCategory } = req.query;
-  
-    if (!adCategory) {
-      return res.status(400).json({ message: "adCategory is required" });
-    }
-  
-    try {
-      const advertisements = await Advertistment.find({
-        adCategory,
-        isDeleted: false,
-        isActive: true,
-      })
-        .populate("adType")
-        .populate("adCategory")
-        .skip(skip)
-        .limit(limit)
-        .sort({ uploadedDate: -1 });
-  
-      const total = await Advertistment.countDocuments({
-        adCategory,
-        isDeleted: false,
-        isActive: true,
-      });
-  
-      res.status(200).json({
-        advertisements,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(total / limit),
-          totalItems: total,
-        },
-      });
-    } catch (err) {
-      res.status(500).json({ message: err.message });
-    }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  const { adCategory } = req.query;
+
+  // Base query
+  const query = {
+    isDeleted: false,
+    isActive: true,
+  };
+
+  // Add adCategory filter if provided
+  if (adCategory) {
+    query.adCategory = adCategory;
+  }
+
+  try {
+    const advertisements = await Advertistment.find(query)
+      .populate("adType")
+      .populate("adCategory")
+      .skip(skip)
+      .limit(limit)
+      .sort({ uploadedDate: -1 });
+
+    const total = await Advertistment.countDocuments(query);
+
+    res.status(200).json({
+      advertisements,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
   
 router.get("/:id", async (req, res) => {
