@@ -1491,7 +1491,7 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
       name: data.memory?.name,
       relationship: data.memory?.relationship,
       country: data.memory?.country,
-      images: (fileList?.memoryImages?.[0]?.location) || "",
+      images: fileList?.memoryImages?.[0]?.location || "",
     };
   } else if (tributeOptions === "flower") {
     tributeData.flower = {
@@ -1505,11 +1505,15 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
   }
 
   let result;
+
   if (tributeId) {
     result = await TributeItem.findByIdAndUpdate(tributeId, tributeData, { new: true });
     if (!result) throw new Error("Failed to update tribute");
   } else {
     result = await TributeItem.create(tributeData);
+
+    order.tributeItems.push(result._id);
+    await order.save();
   }
 
   return result;
