@@ -297,6 +297,11 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
         path: "orders",
         model: "Order",
         match: { isDeleted: false },
+        populate: {
+          path: "selectedPackage",
+          model: "ObituaryRemembarancePackages",
+          match: { isDeleted: false },
+        }
       })
       .skip(skip)
       .limit(limit)
