@@ -523,22 +523,28 @@ router.get("/:id", async (req, res) => {
 });
 
 router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const order = await Order.findByIdAndUpdate(
-        id,
-        { isDeleted: true }, 
-        { new: true }    
-      );
-  
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-  
-      res.status(200).json("Order marked as deleted");
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findByIdAndUpdate(
+      id,
+      { isDeleted: true },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
     }
+
+    await User.updateMany(
+      { orders: id },
+      { $pull: { orders: id } }
+    );
+
+    res.status(200).json("Order marked as deleted and removed from user records");
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 router.delete("/:userId/:orderId", verifyTokenAndAuthorization, async (req, res) => {
@@ -953,10 +959,7 @@ async function updateOrder(orderId, data, fileList) {
     if (typeof data.accountDetails === "string") data.accountDetails = JSON.parse(data.accountDetails);
     if (typeof data.information === "string") data.information = JSON.parse(data.information);
     if (typeof data.selectedAddons === "string") data.selectedAddons = JSON.parse(data.selectedAddons);
-
-    if (typeof data.contactDetails === "string") {
-      data.contactDetails = JSON.parse(data.contactDetails);
-    }
+    if (typeof data.contactDetails === "string") data.contactDetails = JSON.parse(data.contactDetails);
 
     if (Array.isArray(data.contactDetails) && typeof data.contactDetails[0] === "string") {
       data.contactDetails = data.contactDetails.map(str => {
@@ -967,6 +970,7 @@ async function updateOrder(orderId, data, fileList) {
         }
       });
     }
+
     if (!Array.isArray(data.contactDetails)) {
       throw new Error("contactDetails must be an array");
     }
@@ -1128,7 +1132,7 @@ async function updateOrder(orderId, data, fileList) {
     throw new Error("Stripe payment failed");
   } */
 
-const stripe = new Stripe(process.env.STRIPE_SECRET);
+  const stripe = new Stripe(process.env.STRIPE_SECRET);
 let stripeCharge;
 try {
   const paymentIntent = await stripe.paymentIntents.create({
@@ -1181,6 +1185,22 @@ try {
   };
 
   const updatedOrder = await Order.findByIdAndUpdate(orderId, updateData, { new: true });
+
+  try {
+    const user = await User.findOne({ username: data.username, isDeleted: false });
+
+    if (!user) {
+      console.warn(`User with username ${data.username} not found`);
+    } else {
+      const orderIdStr = orderId.toString();
+      if (!user.orders.map(id => id.toString()).includes(orderIdStr)) {
+        user.orders.push(orderId);
+        await user.save();
+      }
+    }
+  } catch (userErr) {
+    console.error("Failed to update user's orders array:", userErr.message);
+  }
 
   try {
     await sendOrderPlacedEmail(updatedOrder._id);

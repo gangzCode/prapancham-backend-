@@ -290,10 +290,14 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-
     const skip = (page - 1) * limit;
 
     const user = await User.find({ isDeleted: false })
+      .populate({
+        path: "orders",
+        model: "Order",
+        match: { isDeleted: false },
+      })
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });

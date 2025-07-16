@@ -39,7 +39,11 @@ const UserSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
-    }
+    },
+    orders: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ObituaryRemembarancePackages'
+    }],
   },
   { timestamps: true }
 );
