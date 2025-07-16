@@ -42,7 +42,7 @@ const UserSchema = new mongoose.Schema(
     },
     orders: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'ObituaryRemembarancePackages'
+        ref: 'Order'
     }],
   },
   { timestamps: true }
