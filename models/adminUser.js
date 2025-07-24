@@ -31,7 +31,12 @@ const adminUserSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: false,
-    }
+    },
+    adminAccessPages: [{
+            type: String,
+            enum: ['Dashboard', 'Obituary', 'Advertistment','News','Events','Tribute','ContactUs','FAQ','Country','Newsletter','Youtube','Podcast','Quote'],
+            required: true, 
+    }],
   },
   { timestamps: true }
 );

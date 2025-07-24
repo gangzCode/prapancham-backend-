@@ -8,20 +8,46 @@ const mongoose = require("mongoose");
 
 //REGISTER
 router.post("/register", async (req, res) => {
-  const newUser = new AdminUser({
-    username: req.body.username,
-    email: req.body.email,
-    phone: req.body.phone,
-    password: CryptoJS.AES.encrypt(req.body.password, process.env.PASS_SEC).toString(),
-    isAdmin: req.body.isSuperAdmin || req.body.isAdmin,
-    isSuperAdmin: req.body.isSuperAdmin,
-  });
-
   try {
+    const {
+      username,
+      email,
+      phone,
+      password,
+      isAdmin,
+      isSuperAdmin,
+      adminAccessPages
+    } = req.body;
+
+    const encryptedPassword = CryptoJS.AES.encrypt(password, process.env.PASS_SEC).toString();
+
+    // Logic: SuperAdmin or Admin
+    if (isAdmin && (!Array.isArray(adminAccessPages) || adminAccessPages.length === 0)) {
+      return res.status(400).json({
+        message: "adminAccessPages are required when isAdmin is true",
+      });
+    }
+
+    if (!isAdmin && !isSuperAdmin && Array.isArray(adminAccessPages) && adminAccessPages.length > 0) {
+      return res.status(400).json({
+        message: "Non-admin users are not allowed to have adminAccessPages",
+      });
+    }
+
+    const newUser = new AdminUser({
+      username,
+      email,
+      phone,
+      password: encryptedPassword,
+      isAdmin: isSuperAdmin || isAdmin,
+      isSuperAdmin,
+      ...(isAdmin && { adminAccessPages }) // assign only if isAdmin is true
+    });
+
     const savedUser = await newUser.save();
     return res.status(201).json(savedUser);
   } catch (err) {
-    return res.status(500).json(err);
+    return res.status(500).json({ message: err.message });
   }
 });
 
@@ -55,6 +81,50 @@ router.post("/login", async (req, res) => {
     res.status(200).json({ ...others, accessToken });
   } catch (err) {
     return res.status(500).json(err);
+  }
+});
+
+router.put("/:id", verifyTokenAndSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      username,
+      email,
+      phone,
+      isAdmin,
+      isSuperAdmin,
+      adminAccessPages
+    } = req.body;
+
+    const updateData = {
+      ...(username && { username }),
+      ...(email && { email }),
+      ...(phone && { phone }),
+      ...(typeof isAdmin !== "undefined" && { isAdmin }),
+      ...(typeof isSuperAdmin !== "undefined" && { isSuperAdmin }),
+    };
+
+    if (isAdmin || isSuperAdmin) {
+      if (adminAccessPages && Array.isArray(adminAccessPages)) {
+        updateData.adminAccessPages = adminAccessPages;
+      }
+    } else if (adminAccessPages && adminAccessPages.length > 0) {
+      return res.status(400).json({
+        message: "Non-admin users cannot update adminAccessPages",
+      });
+    }
+
+    const updatedUser = await AdminUser.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Admin user not found" });
+    }
+
+    return res.status(200).json(updatedUser);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 });
 
