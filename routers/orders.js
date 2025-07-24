@@ -122,6 +122,92 @@ router.post("/update", verifyTokenAndAdmin, async (req, res) => {
     }
 });
 
+router.put("/:id/donation-given-back", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { price, currencyCode } = req.body;
+
+    if (typeof price !== "number" || price < 0) {
+      return res.status(400).json({ message: "Valid price is required" });
+    }
+
+    const update = {
+      donationGivenBack: {
+        price,
+        currencyCode: currencyCode || "CAD"
+      }
+    };
+
+    const updatedOrder = await Order.findByIdAndUpdate(id, update, { new: true });
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.status(200).json(updatedOrder);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.put("/:id/status", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orderStatus } = req.body;
+
+    const validStatuses = [
+      "Review Requested",
+      "Post Approved",
+      "Approval Denied",
+      "Requested for Changes",
+      "Expired",
+      "Refunded"
+    ];
+
+    if (!validStatuses.includes(orderStatus)) {
+      return res.status(400).json({ message: "Invalid order status value" });
+    }
+
+    const existingOrder = await Order.findById(id);
+    if (!existingOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const statusChanged = existingOrder.orderStatus !== orderStatus;
+
+    let expiryDate = existingOrder.expiryDate;
+
+    if (statusChanged && orderStatus === "Post Approved") {
+      const packageInfo = await existingOrder.populate("selectedPackage");
+      const durationInDays = packageInfo.selectedPackage?.duration || 0;
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + durationInDays);
+      expiryDate = expiry.toISOString();
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        orderStatus,
+        expiryDate: statusChanged && orderStatus === "Post Approved" ? expiryDate : existingOrder.expiryDate
+      },
+      { new: true }
+    );
+
+    if (statusChanged) {
+      try {
+        await sendOrderUpdateEmail(updatedOrder._id);
+      } catch (emailErr) {
+        console.error("Error sending order update email:", emailErr.message);
+      }
+    }
+
+    res.status(200).json(updatedOrder);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get("/priority", async (req, res) => {
   try {
     const priorityOrders = await Order.find({ isDeleted: false, orderStatus:'Post Approved' })
@@ -742,7 +828,7 @@ router.post("/donation", async (req, res) => {
       }
     }
 
-  let stripeCharge;
+ /*  let stripeCharge;
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(finalPriceInCAD.price * 100),
@@ -759,34 +845,34 @@ router.post("/donation", async (req, res) => {
     stripeCharge = paymentIntent;
   } catch (err) {
     throw new Error("Stripe payment failed");
-  } 
+  }  */
 
-    // let stripeCharge;
-    // try {
-    //   const paymentIntent = await stripe.paymentIntents.create({
-    //     amount: Math.round(finalPriceInCAD.price * 100),
-    //     currency: "cad",
-    //     automatic_payment_methods: {
-    //       enabled: true,
-    //       allow_redirects: "never",
-    //     },
-    //     metadata: {
-    //       orderId: orderId ? orderId.toString() : "N/A",
-    //       donor: email || name || "Anonymous",
-    //     },
-    //     description: `Donation by ${email || name || "Anonymous"}`,
-    //   });
+    let stripeCharge;
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(finalPriceInCAD.price * 100),
+        currency: "cad",
+        automatic_payment_methods: {
+          enabled: true,
+          allow_redirects: "never",
+        },
+        metadata: {
+          orderId: orderId ? orderId.toString() : "N/A",
+          donor: email || name || "Anonymous",
+        },
+        description: `Donation by ${email || name || "Anonymous"}`,
+      });
 
-    //   if (paymentIntent.status === "requires_payment_method") {
-    //     console.warn("PaymentIntent created, but needs payment method attached");
-    //   }
+      if (paymentIntent.status === "requires_payment_method") {
+        console.warn("PaymentIntent created, but needs payment method attached");
+      }
 
-    //   stripeCharge = paymentIntent;
-    // } catch (err) {
-    //   console.error("Stripe error:", err.message);
-    //   return res.status(500).send(`Stripe payment failed: ${err.message}`);
-    // }
-
+      stripeCharge = paymentIntent;
+    } catch (err) {
+      console.error("Stripe error:", err.message);
+      return res.status(500).send(`Stripe payment failed: ${err.message}`);
+    }
+ 
     const donation = new Donation({
       email,
       name,
@@ -802,7 +888,6 @@ router.post("/donation", async (req, res) => {
 
     await donation.save();
 
-    // ✅ Update the Order model if this donation is tied to an order
     if (orderId) {
       const order = await Order.findById(orderId);
 
@@ -891,6 +976,48 @@ router.put("/donation/:id", verifyTokenAndAdmin, async (req, res) => {
   } catch (err) {
     console.error("Status update error:", err.message);
     return res.status(500).send("Failed to update donation status");
+  }
+});
+
+router.get("/donation/donations-summary", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const result = await Order.aggregate([
+      {
+        $match: {
+          isDeleted: false
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalDonationReceived: { $sum: { $ifNull: ["$donationRecieved.price", 0] } },
+          totalDonationGivenBack: { $sum: { $ifNull: ["$donationGivenBack.price", 0] } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalDonationReceived: { $round: ["$totalDonationReceived", 2] },
+          totalDonationGivenBack: { $round: ["$totalDonationGivenBack", 2] },
+          netDonation: {
+            $round: [
+              { $subtract: ["$totalDonationReceived", "$totalDonationGivenBack"] },
+              2
+            ]
+          }
+        }
+      }
+    ]);
+
+    const summary = result[0] || {
+      totalDonationReceived: 0,
+      totalDonationGivenBack: 0,
+      netDonation: 0
+    };
+
+    res.status(200).json(summary);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -1133,31 +1260,31 @@ async function updateOrder(orderId, data, fileList) {
   } */
 
   const stripe = new Stripe(process.env.STRIPE_SECRET);
-let stripeCharge;
-try {
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(finalPriceInCAD.price * 100),
-    currency: "cad",
-    automatic_payment_methods: {
-      enabled: true,
-      allow_redirects: "never",
-    },
-    metadata: {
-      orderId: orderId.toString(),
-      customer: data.username,
-    },
-    description: `Test order for ${data.username}`
-  });
+  let stripeCharge;
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(finalPriceInCAD.price * 100),
+      currency: "cad",
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: "never",
+      },
+      metadata: {
+        orderId: orderId.toString(),
+        customer: data.username,
+      },
+      description: `order for ${data.username}`
+    });
 
-  if (paymentIntent.status === "requires_payment_method") {
-    console.warn("PaymentIntent created, but needs payment method attached");
+    if (paymentIntent.status === "requires_payment_method") {
+      console.warn("PaymentIntent created, but needs payment method attached");
+    }
+
+    stripeCharge = paymentIntent;
+  } catch (err) {
+    console.error("Stripe error:", err.message);
+    throw new Error("Stripe payment failed");
   }
-
-  stripeCharge = paymentIntent;
-} catch (err) {
-  console.error("Stripe error:", err.message);
-  throw new Error("Stripe payment failed");
-}
 
   const updateData = {
     username: data.username,
