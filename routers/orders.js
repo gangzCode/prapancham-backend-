@@ -282,6 +282,7 @@ router.get("/all", verifyTokenAndAdmin, async (req, res) => {
       })
       .populate("selectedPrimaryImageBgFrame")
       .populate("recievedDonations")
+      .populate("tributeItems")
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 });
