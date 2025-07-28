@@ -586,6 +586,54 @@ router.post(`/printReportForAdmin`, verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
+router.delete("/donation/:id", verifyTokenAndAdmin, async (req, res) => {
+  const donationId = req.params.id;
+
+  if (!mongoose.Types.ObjectId.isValid(donationId)) {
+    return res.status(400).send("Invalid donation ID");
+  }
+
+  try {
+    const donation = await Donation.findById(donationId);
+    if (!donation || donation.isDeleted) {
+      return res.status(404).send("Donation not found or already deleted");
+    }
+
+    donation.isDeleted = true;
+    await donation.save();
+
+    if (donation.order) {
+      const order = await Order.findById(donation.order);
+      if (order) {
+        order.recievedDonations = order.recievedDonations.filter(
+          (dId) => dId.toString() !== donation._id.toString()
+        );
+
+        const deductionAmount = donation.finalPriceInCAD?.price || 0;
+        if (
+          order.donationRecieved &&
+          typeof order.donationRecieved.price === "number"
+        ) {
+          order.donationRecieved.price = Math.max(
+            0,
+            order.donationRecieved.price - deductionAmount
+          );
+        }
+
+        await order.save();
+      }
+    }
+
+    return res.status(200).send({
+      message: "Donation deleted and order updated successfully",
+      donationId: donation._id,
+    });
+  } catch (err) {
+    console.error("Donation delete error:", err.message);
+    return res.status(500).send("Failed to delete donation");
+  }
+});
+
 router.get("/:id", async (req, res) => {
     const orderId = req.params.id;
   
@@ -1018,54 +1066,6 @@ router.get("/donation/donations-summary", verifyTokenAndAdmin, async (req, res) 
     res.status(200).json(summary);
   } catch (err) {
     res.status(500).json({ message: err.message });
-  }
-});
-
-router.delete("/donation/:id", verifyTokenAndAdmin, async (req, res) => {
-  const donationId = req.params.id;
-
-  if (!mongoose.Types.ObjectId.isValid(donationId)) {
-    return res.status(400).send("Invalid donation ID");
-  }
-
-  try {
-    const donation = await Donation.findById(donationId);
-    if (!donation || donation.isDeleted) {
-      return res.status(404).send("Donation not found or already deleted");
-    }
-
-    donation.isDeleted = true;
-    await donation.save();
-
-    if (donation.order) {
-      const order = await Order.findById(donation.order);
-      if (order) {
-        order.recievedDonations = order.recievedDonations.filter(
-          (dId) => dId.toString() !== donation._id.toString()
-        );
-
-        const deductionAmount = donation.finalPriceInCAD?.price || 0;
-        if (
-          order.donationRecieved &&
-          typeof order.donationRecieved.price === "number"
-        ) {
-          order.donationRecieved.price = Math.max(
-            0,
-            order.donationRecieved.price - deductionAmount
-          );
-        }
-
-        await order.save();
-      }
-    }
-
-    return res.status(200).send({
-      message: "Donation deleted and order updated successfully",
-      donationId: donation._id,
-    });
-  } catch (err) {
-    console.error("Donation delete error:", err.message);
-    return res.status(500).send("Failed to delete donation");
   }
 });
 
