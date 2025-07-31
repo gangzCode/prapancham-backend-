@@ -67,15 +67,23 @@ const tributeItemSchema = mongoose.Schema({
             type: String,
             required: false,
         },
-        name: {
+        from: {
             type: String,
             required: false,
         },
-        relationship: {
+        to: {
             type: String,
             required: false,
         },
-        country: {
+        addressLineOne: {
+            type: String,
+            required: false,
+        },
+        addressLineTwo: {
+            type: String,
+            required: false,
+        },
+        addressLineThree: {
             type: String,
             required: false,
         },
@@ -105,6 +113,17 @@ const tributeItemSchema = mongoose.Schema({
             type: String,
             required: false,
         },
+        finalPriceInCAD: {
+            price: {
+                type: Number,
+                min: 0,
+                required: false,
+            },
+            currencyCode: {
+                type: String,
+                default: 'CAD',
+            }
+        },
     },
     flower: {
         flowerType: {
@@ -119,6 +138,17 @@ const tributeItemSchema = mongoose.Schema({
             type: String,
             required: false,
         },
+        finalPriceInCAD: {
+            price: {
+                type: Number,
+                min: 0,
+                required: false,
+            },
+            currencyCode: {
+                type: String,
+                default: 'CAD',
+            }
+        },
         name: {
             type: String,
             required: false,
@@ -130,6 +160,12 @@ const tributeItemSchema = mongoose.Schema({
         country: {
             type: String,
             required: false,
+        },
+        deliveryStatus: {
+            type: String,
+            enum: ['Needs To Be Delivered', 'Delivered','Cancelled'],
+            required: true, 
+            default: 'Needs To Be Delivered'
         },
     },
     tributeStatus: {

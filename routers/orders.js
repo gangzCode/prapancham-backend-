@@ -758,9 +758,7 @@ router.put("/tribute/:tributeId", async (req, res) => {
       return res.status(404).send("Tribute not found");
     }
 
-    // Step 2: If status is "Tribute Approved", update the related order
     if (tributeStatus === "Tribute Approved" && tribute.order) {
-      // Push the tribute ID if not already present
       await Order.findByIdAndUpdate(tribute.order, {
         $addToSet: { tributeItems: tribute._id }, // avoids duplicates
         $set: { orderStatus: "Post Approved" }     // optional: set order status
@@ -1597,7 +1595,7 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
   });
   if (!order) throw new Error("Order not found or not approved");
 
-  ["message", "card", "letter", "memory", "flower"].forEach((key) => {
+  validTypes.forEach((key) => {
     if (typeof data[key] === "string") {
       try {
         data[key] = JSON.parse(data[key]);
@@ -1612,50 +1610,79 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
     order: order._id,
     isDeleted: false,
     isActive: data.isActive !== undefined ? data.isActive : true,
+    tributeStatus: "Review Requested",
   };
 
-  if (tributeOptions === "message") {
-    tributeData.message = data.message;
-  } else if (tributeOptions === "card") {
-    tributeData.card = {
-      cardTemplate: data.card?.cardTemplate,
-      message: data.card?.message,
-      name: data.card?.name,
-      relationship: data.card?.relationship,
-      country: data.card?.country,
-    };
-  } else if (tributeOptions === "letter") {
-    tributeData.letter = {
-      letterTemplate: data.letter?.letterTemplate,
-      message: data.letter?.message,
-      name: data.letter?.name,
-      relationship: data.letter?.relationship,
-      country: data.letter?.country,
-    };
-  } else if (tributeOptions === "memory") {
-    tributeData.memory = {
-      email: data.memory?.email,
-      message: data.memory?.message,
-      name: data.memory?.name,
-      relationship: data.memory?.relationship,
-      country: data.memory?.country,
-      images: fileList?.memoryImages?.[0]?.location || "",
-    };
-  } else if (tributeOptions === "flower") {
-    tributeData.flower = {
-      flowerType: data.flower?.flowerType,
-      email: data.flower?.email,
-      message: data.flower?.message,
-      name: data.flower?.name,
-      relationship: data.flower?.relationship,
-      country: data.flower?.country,
-    };
+  switch (tributeOptions) {
+    case "message":
+      tributeData.message = data.message;
+      break;
+
+    case "card":
+      tributeData.card = {
+        cardTemplate: data.card?.cardTemplate,
+        message: data.card?.message,
+        name: data.card?.name,
+        relationship: data.card?.relationship,
+        country: data.card?.country,
+      };
+      break;
+
+    case "letter":
+      tributeData.letter = {
+        letterTemplate: data.letter?.letterTemplate,
+        message: data.letter?.message,
+        from: data.letter?.from,
+        to: data.letter?.to,
+        addressLineOne: data.letter?.addressLineOne,
+        addressLineTwo: data.letter?.addressLineTwo,
+        addressLineThree: data.letter?.addressLineThree,
+      };
+      break;
+
+    case "memory":
+      tributeData.memory = {
+        email: data.memory?.email,
+        message: data.memory?.message,
+        name: data.memory?.name,
+        relationship: data.memory?.relationship,
+        country: data.memory?.country,
+        images: fileList?.memoryImages?.[0]?.location || "",
+        finalPriceInCAD: data.memory?.finalPriceInCAD || undefined,
+      };
+      break;
+
+    case "flower":
+      tributeData.flower = {
+        flowerType: data.flower?.flowerType,
+        email: data.flower?.email,
+        message: data.flower?.message,
+        name: data.flower?.name,
+        relationship: data.flower?.relationship,
+        country: data.flower?.country,
+        deliveryStatus: data.flower?.deliveryStatus || "Needs To Be Delivered",
+        finalPriceInCAD: data.flower?.finalPriceInCAD || undefined,
+      };
+      break;
   }
 
   let result;
 
   if (tributeId) {
-    result = await TributeItem.findByIdAndUpdate(tributeId, tributeData, { new: true });
+    const unsetFields = validTypes.reduce((acc, option) => {
+      if (option !== tributeOptions) acc[option] = "";
+      return acc;
+    }, {});
+
+    result = await TributeItem.findByIdAndUpdate(
+      tributeId,
+      {
+        $set: tributeData,
+        $unset: unsetFields,
+      },
+      { new: true }
+    );
+
     if (!result) throw new Error("Failed to update tribute");
   } else {
     result = await TributeItem.create(tributeData);
