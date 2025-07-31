@@ -21,7 +21,6 @@ router.post("/register", async (req, res) => {
 
     const encryptedPassword = CryptoJS.AES.encrypt(password, process.env.PASS_SEC).toString();
 
-    // Logic: SuperAdmin or Admin
     if (isAdmin && (!Array.isArray(adminAccessPages) || adminAccessPages.length === 0)) {
       return res.status(400).json({
         message: "adminAccessPages are required when isAdmin is true",
@@ -39,9 +38,9 @@ router.post("/register", async (req, res) => {
       email,
       phone,
       password: encryptedPassword,
-      isAdmin: isSuperAdmin || isAdmin,
+      isAdmin,
       isSuperAdmin,
-      ...(isAdmin && { adminAccessPages }) // assign only if isAdmin is true
+      ...(isAdmin && { adminAccessPages })
     });
 
     const savedUser = await newUser.save();
