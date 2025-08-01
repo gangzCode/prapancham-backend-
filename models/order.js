@@ -73,22 +73,22 @@ const orderSchema = mongoose.Schema(
         bankName: {
             type: String,
             default: '',
-            required: true
+            required: false
         },
         branchName: {
             type: String,
             default: '',
-            required: true
+            required: false
         },
         accountNumber: {
             type: Number,
             min: 0,
-            required: true
+            required: false
         },
         accountHolderName: {
             type: String,
             default: '',
-            required: true
+            required: false
         }
     },
     contactDetails:[
