@@ -92,7 +92,7 @@ router.post("/create-payment-intent", verifyTokenAndAuthorization, async (req, r
   }
 });
 
-router.post("/confirm-order", async (req, res) => {
+router.post("/confirm-order",verifyTokenAndAuthorization, async (req, res) => {
   const tempOrderId = new mongoose.Types.ObjectId();
 
   uploadAWS(tempOrderId.toString()).fields([
@@ -891,147 +891,248 @@ router.delete("/tribute/:tributeId", async (req, res) => {
   }
 });
 
-router.post("/donation", async (req, res) => {
+// router.post("/donation", async (req, res) => {
+//   const Stripe = require("stripe");
+//   const stripe = new Stripe(process.env.STRIPE_SECRET);
+//   const safeToString = (val) => (val ? val.toString() : "");
+
+//   try {
+//     const {
+//       email,
+//       name,
+//       address,
+//       phoneNumber,
+//       orderId,
+//       donationAmount,
+//       countryId,
+//     } = req.body;
+
+//     if (!donationAmount || !countryId) {
+//       return res.status(400).send("Required fields missing: donationAmount, countryId");
+//     }
+
+//     const country = await Country.findOne({
+//       _id: countryId,
+//       isActive: true,
+//       isDeleted: false,
+//     });
+//     if (!country) return res.status(400).send("Invalid or inactive country selected");
+
+//     const currencyCode = country.currencyCode;
+
+//     let finalPriceInCAD = {
+//       price: donationAmount,
+//       currencyCode: "CAD",
+//     };
+
+//     if (currencyCode.toLowerCase() !== "cad") {
+//       try {
+//         const url = `https://api.exchangerate.host/convert?from=${currencyCode}&to=CAD&amount=${donationAmount}&access_key=0ab9aa457e3235237a7aff525c1431e3`;
+//         const response = await fetch(url);
+//         if (!response.ok) {
+//           throw new Error(`Exchange API error: ${response.status} ${response.statusText}`);
+//         }
+//         const result = await response.json();
+//         if (!result || typeof result.result !== "number") {
+//           throw new Error("Currency conversion failed: Invalid response");
+//         }
+
+//         finalPriceInCAD = {
+//           price: result.result,
+//           currencyCode: "CAD",
+//         };
+//       } catch (err) {
+//         return res.status(500).send("Failed to convert donation to CAD");
+//       }
+//     }
+
+//  /*  let stripeCharge;
+//   try {
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount: Math.round(finalPriceInCAD.price * 100),
+//       currency: "cad",
+//       automatic_payment_methods: {
+//         enabled: true,
+//       },
+//        metadata: {
+//           orderId: orderId ? orderId.toString() : "N/A",
+//           donor: email || name || "Anonymous",
+//         },
+//         description: `Donation by ${email || name || "Anonymous"}`,
+//     });
+//     stripeCharge = paymentIntent;
+//   } catch (err) {
+//     throw new Error("Stripe payment failed");
+//   }  */
+
+//     let stripeCharge;
+//     try {
+//       const paymentIntent = await stripe.paymentIntents.create({
+//         amount: Math.round(finalPriceInCAD.price * 100),
+//         currency: "cad",
+//         automatic_payment_methods: {
+//           enabled: true,
+//           allow_redirects: "never",
+//         },
+//         metadata: {
+//           orderId: orderId ? orderId.toString() : "N/A",
+//           donor: email || name || "Anonymous",
+//         },
+//         description: `Donation by ${email || name || "Anonymous"}`,
+//       });
+
+//       if (paymentIntent.status === "requires_payment_method") {
+//         console.warn("PaymentIntent created, but needs payment method attached");
+//       }
+
+//       stripeCharge = paymentIntent;
+//     } catch (err) {
+//       console.error("Stripe error:", err.message);
+//       return res.status(500).send(`Stripe payment failed: ${err.message}`);
+//     }
+ 
+//     const donation = new Donation({
+//       email,
+//       name,
+//       address,
+//       phoneNumber,
+//       order: orderId || null,
+//       finalPrice: {
+//         country: country._id,
+//         price: donationAmount,
+//       },
+//       finalPriceInCAD,
+//     });
+
+//     await donation.save();
+
+//     if (orderId) {
+//       const order = await Order.findById(orderId);
+
+//       if (order) {
+//         order.recievedDonations.push(donation._id);
+
+//         if (!order.donationRecieved || typeof order.donationRecieved.price !== "number") {
+//           order.donationRecieved = {
+//             price: finalPriceInCAD.price,
+//             currencyCode: "CAD"
+//           };
+//         } else {
+//           order.donationRecieved.price += finalPriceInCAD.price;
+//         }
+
+//         await order.save();
+//       }
+//     }
+
+//     return res.status(200).send({
+//       donation,
+//       paymentIntentClientSecret: stripeCharge.client_secret,
+//     });
+//   } catch (err) {
+//     console.error("Donation error:", err.message);
+//     return res.status(500).send(`Failed to process donation: ${err.message}`);
+//   }
+// });
+
+router.post("/donation/create-payment-intent", async (req, res) => {
   const Stripe = require("stripe");
   const stripe = new Stripe(process.env.STRIPE_SECRET);
-  const safeToString = (val) => (val ? val.toString() : "");
+  const { donationAmount, countryId, orderId } = req.body;
 
-  try {
-    const {
-      email,
-      name,
-      address,
-      phoneNumber,
-      orderId,
-      donationAmount,
-      countryId,
-    } = req.body;
+  if (!donationAmount || !countryId || !orderId) {
+    return res.status(400).send("Required: donationAmount, countryId, orderId");
+  }
 
-    if (!donationAmount || !countryId) {
-      return res.status(400).send("Required fields missing: donationAmount, countryId");
-    }
+  const order = await Order.findById(orderId);
+  if (!order) return res.status(400).send("Invalid orderId");
 
-    const country = await Country.findOne({
-      _id: countryId,
-      isActive: true,
-      isDeleted: false,
-    });
-    if (!country) return res.status(400).send("Invalid or inactive country selected");
+  const country = await Country.findOne({ _id: countryId, isActive: true, isDeleted: false });
+  if (!country) return res.status(400).send("Invalid country");
 
-    const currencyCode = country.currencyCode;
-
-    let finalPriceInCAD = {
-      price: donationAmount,
-      currencyCode: "CAD",
-    };
-
-    if (currencyCode.toLowerCase() !== "cad") {
-      try {
-        const url = `https://api.exchangerate.host/convert?from=${currencyCode}&to=CAD&amount=${donationAmount}&access_key=0ab9aa457e3235237a7aff525c1431e3`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Exchange API error: ${response.status} ${response.statusText}`);
-        }
-        const result = await response.json();
-        if (!result || typeof result.result !== "number") {
-          throw new Error("Currency conversion failed: Invalid response");
-        }
-
-        finalPriceInCAD = {
-          price: result.result,
-          currencyCode: "CAD",
-        };
-      } catch (err) {
-        return res.status(500).send("Failed to convert donation to CAD");
+  let finalAmount = donationAmount;
+  if (country.currencyCode.toLowerCase() !== "cad") {
+    try {
+      const response = await fetch(`https://api.exchangerate.host/convert?from=${country.currencyCode}&to=CAD&amount=${donationAmount}&access_key=${process.env.EXCHANGE_RATE_KEY}`);
+      const result = await response.json();
+      if (!result || typeof result.result !== "number") {
+        return res.status(500).send("Currency conversion failed");
       }
+      finalAmount = result.result;
+    } catch {
+      return res.status(500).send("Currency conversion failed");
     }
+  }
 
- /*  let stripeCharge;
   try {
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(finalPriceInCAD.price * 100),
+      amount: Math.round(finalAmount * 100), // amount in cents
       currency: "cad",
-      automatic_payment_methods: {
-        enabled: true,
-      },
-       metadata: {
-          orderId: orderId ? orderId.toString() : "N/A",
-          donor: email || name || "Anonymous",
-        },
-        description: `Donation by ${email || name || "Anonymous"}`,
-    });
-    stripeCharge = paymentIntent;
-  } catch (err) {
-    throw new Error("Stripe payment failed");
-  }  */
-
-    let stripeCharge;
-    try {
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(finalPriceInCAD.price * 100),
-        currency: "cad",
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: "never",
-        },
-        metadata: {
-          orderId: orderId ? orderId.toString() : "N/A",
-          donor: email || name || "Anonymous",
-        },
-        description: `Donation by ${email || name || "Anonymous"}`,
-      });
-
-      if (paymentIntent.status === "requires_payment_method") {
-        console.warn("PaymentIntent created, but needs payment method attached");
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        orderId: orderId.toString(),
+        donationAmount: donationAmount.toString(),
       }
+    });
 
-      stripeCharge = paymentIntent;
-    } catch (err) {
-      console.error("Stripe error:", err.message);
-      return res.status(500).send(`Stripe payment failed: ${err.message}`);
+    return res.status(200).send({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    });
+  } catch (err) {
+    return res.status(500).send("Stripe error: " + err.message);
+  }
+});
+
+router.post("/donation", async (req, res) => {
+  const { name, email, orderId, donationAmount, countryId, paymentIntentId, finalPriceInCAD } = req.body;
+
+  if (!orderId || !donationAmount || !countryId) {
+    return res.status(400).send("Missing required fields: orderId, donationAmount, countryId");
+  }
+
+  try {
+    /*
+    // Optionally verify payment intent if provided
+    if (paymentIntentId) {
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (intent.status !== "succeeded") {
+        return res.status(400).send("Payment not successful or not completed");
+      }
     }
- 
+    */
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(400).send("Invalid orderId");
+
+    // Create donation document
     const donation = new Donation({
-      email,
       name,
-      address,
-      phoneNumber,
-      order: orderId || null,
-      finalPrice: {
-        country: country._id,
-        price: donationAmount,
-      },
-      finalPriceInCAD,
+      email,
+      order: orderId,
+      finalPrice: { country: countryId, price: donationAmount },
+      finalPriceInCAD: finalPriceInCAD || { price: donationAmount, currencyCode: "CAD" },
+      stripePaymentIntentId: paymentIntentId || null,
+      adminDonationStatus: "Donation Recieved",
     });
 
     await donation.save();
 
-    if (orderId) {
-      const order = await Order.findById(orderId);
-
-      if (order) {
-        order.recievedDonations.push(donation._id);
-
-        if (!order.donationRecieved || typeof order.donationRecieved.price !== "number") {
-          order.donationRecieved = {
-            price: finalPriceInCAD.price,
-            currencyCode: "CAD"
-          };
-        } else {
-          order.donationRecieved.price += finalPriceInCAD.price;
-        }
-
-        await order.save();
-      }
+    order.recievedDonations = order.recievedDonations || [];
+    if (!order.recievedDonations.includes(donation._id)) {
+      order.recievedDonations.push(donation._id);
     }
 
-    return res.status(200).send({
-      donation,
-      paymentIntentClientSecret: stripeCharge.client_secret,
-    });
+    order.donationRecieved = order.donationRecieved || { price: 0, currencyCode: "CAD" };
+    order.donationRecieved.price += donation.finalPriceInCAD.price;
+    order.donationRecieved.currencyCode = donation.finalPriceInCAD.currencyCode;
+
+    await order.save();
+
+    return res.status(200).send({ message: "Donation saved successfully", donation });
   } catch (err) {
-    console.error("Donation error:", err.message);
-    return res.status(500).send(`Failed to process donation: ${err.message}`);
+    console.error("Donation save error:", err);
+    return res.status(500).send("Failed to save donation: " + err.message);
   }
 });
 
