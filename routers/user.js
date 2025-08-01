@@ -250,7 +250,7 @@ router.post("/login", async (req, res) => {
     }
 
     const accessToken = jwt.sign(
-      { id: user._id },
+      { id: user._id,username: user.username },
       process.env.JWT_SEC,
       { expiresIn: "1d" }
     );
