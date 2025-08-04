@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { ObituaryRemembarancePackages } = require("../models/obituaryRemembarance-packages");
-const { verifyTokenAndAuthorization,verifyTokenAndAdmin } = require("./verifyToken");
+const { verifyTokenAndAuthorization,verifyTokenAndAdmin,verifyToken } = require("./verifyToken");
 const { Addons } = require("../models/addons");
 const { Order } = require("../models/order");
 const { User } = require("../models/user");
@@ -92,7 +92,7 @@ router.post("/create-payment-intent", verifyTokenAndAuthorization, async (req, r
   }
 });
 
-router.post("/confirm-order",verifyTokenAndAuthorization, async (req, res) => {
+router.post("/confirm-order", async (req, res) => {
   const tempOrderId = new mongoose.Types.ObjectId();
 
   uploadAWS(tempOrderId.toString()).fields([
@@ -100,31 +100,37 @@ router.post("/confirm-order",verifyTokenAndAuthorization, async (req, res) => {
     { name: "thumbnailImage", maxCount: 1 },
     { name: "additionalImages", maxCount: 10 },
     { name: "slideshowImages", maxCount: 100 }
-  ])(req, res, async (err) => {
+  ])(req, res, async (err) => { // ✅ this inner function is already async
     if (err) return res.status(500).send("Image upload failed");
 
-    const data = sanitizeBodyKeys(req.body);
-    const paymentIntentId = data.paymentIntentId;
-
     try {
-     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (!paymentIntent || paymentIntent.status !== "succeeded") {
-        return res.status(400).send("Payment not completed");
-      }
+      verifyToken(req, res, async () => {
+        if (req.user.username !== req.body.username) {
+          return res.status(403).send("You are not allowed to do that!");
+        }
 
-      const { order } = await updateOrder(tempOrderId.toString(), data, req.files);
+        const data = sanitizeBodyKeys(req.body);
+        const paymentIntentId = data.paymentIntentId;
 
-      return res.send({
-        message: "Order confirmed and saved",
-        order
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        if (!paymentIntent || paymentIntent.status !== "succeeded") {
+          return res.status(400).send("Payment not completed");
+        }
+
+        const { order } = await updateOrder(tempOrderId.toString(), data, req.files);
+
+        return res.send({
+          message: "Order confirmed and saved",
+          order
+        });
       });
-
     } catch (err) {
       console.error("Order confirmation error:", err.message);
       return res.status(500).send("Failed to confirm and save order");
     }
   });
 });
+
 
 /* router.post("/", verifyTokenAndAuthorization, async (req, res) => {
   let orderId;
