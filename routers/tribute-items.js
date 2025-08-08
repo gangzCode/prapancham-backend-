@@ -3,6 +3,7 @@ const router = express.Router();
 const { verifyTokenAndAdmin } = require("./verifyToken");
 const { TributeCardTemplate } = require("../models/tributeCardTemplate");
 const { TributeLetterTemplate } = require("../models/tributeLetterTemplate");
+const { TributeMemoryPricing } = require("../models/tributeMemoryPricing");
 const { TributeFlowerType } = require("../models/tributeFlowerType");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
@@ -532,6 +533,92 @@ router.delete("/flower-type/:id", verifyTokenAndAdmin, async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
+});
+
+router.post("/memory-pricing",verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const pricing = new TributeMemoryPricing(req.body);
+    const saved = await pricing.save();
+    res.status(201).json(saved);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.get("/memory-pricing/all",verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const result = await TributeMemoryPricing.find({ isDeleted: false }).populate("priceList.country");
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/memory-pricing/active", async (req, res) => {
+  try {
+    const result = await TributeMemoryPricing.find({ isDeleted: false, isActive: true }).populate("priceList.country");
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/memory-pricing/:countryId", async (req, res) => {
+  const { countryId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(countryId)) {
+    return res.status(400).json({ message: "Invalid country ID" });
+  }
+
+  try {
+    const results = await TributeMemoryPricing.find({
+      isDeleted: false,
+      "priceList.country": countryId,
+    }).populate("priceList.country");
+
+    const filteredResults = results.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      isActive: item.isActive,
+      priceList: item.priceList.filter(
+        (entry) => entry.country._id.toString() === countryId
+      ),
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
+
+    res.json(filteredResults);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/memory-pricing/:id", async (req, res) => {
+  try {
+    const updated = await TributeMemoryPricing.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Not found" });
+    res.json(updated);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete("/memory-pricing/:id",verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const deleted = await TributeMemoryPricing.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      { new: true }
+    );
+    if (!deleted) return res.status(404).json({ message: "Not found" });
+    res.json({ message: "Deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 //Functions
