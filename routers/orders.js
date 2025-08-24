@@ -804,6 +804,111 @@ router.delete("/:userId/:orderId", verifyTokenAndAuthorization, async (req, res)
   }
 });
 
+router.post("/tribute/:orderId/create-payment-intent", async (req, res) => {
+  const orderId = req.params.orderId;
+  const data = sanitizeBodyKeys(req.body);
+
+  try {
+    // Validate order exists and is approved
+    const order = await Order.findOne({
+      _id: orderId,
+      isDeleted: false,
+      orderStatus: "Post Approved",
+    });
+    if (!order) {
+      return res.status(400).send("Order not found or not approved");
+    }
+
+    // Validate tribute type
+    if (data.tributeOptions !== "memory") {
+      return res.status(400).send("Payment intent only supported for memory tributes");
+    }
+
+    // Get price from request
+    const tributePrice = data.tributeOptions === "memory" 
+      ? data.memory?.finalPriceInCAD?.price 
+      : data.flower?.finalPriceInCAD?.price;
+
+    if (!tributePrice || tributePrice <= 0) {
+      return res.status(400).send("Valid tribute price is required");
+    }
+
+    const tempTributeId = uuidv4();
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(tributePrice * 100), // Convert to cents
+      currency: "cad",
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: "never"
+      },
+      metadata: {
+        tempTributeId,
+        orderId: orderId.toString(),
+        tributeType: data.tributeOptions
+      },
+      description: `${data.tributeOptions} tribute for order ${orderId}`
+    });
+
+    return res.send({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      tempTributeId,
+      amount: tributePrice,
+      currency: "CAD"
+    });
+  } catch (err) {
+    console.error("Tribute payment intent error:", err.message);
+    return res.status(500).send("Failed to create payment intent");
+  }
+});
+
+router.post("/tribute/:orderId/confirm", async (req, res) => {
+  const orderId = req.params.orderId;
+
+  uploadAWS(orderId).fields([
+    { name: "memoryImages", maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      console.error("Image upload error:", err);
+      return res.status(500).send("Image upload failed");
+    }
+
+    req.body = sanitizeBodyKeys(req.body);
+    const data = req.body;
+
+    try {
+      // Validate payment was completed
+      const paymentIntentId = data.paymentIntentId;
+      if (!paymentIntentId) {
+        return res.status(400).send("Payment intent ID is required");
+      }
+
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (!paymentIntent || paymentIntent.status !== "succeeded") {
+        return res.status(400).send("Payment not completed successfully");
+      }
+
+      // Validate tribute type matches payment intent
+      const expectedTributeType = paymentIntent.metadata.tributeType;
+      if (data.tributeOptions !== expectedTributeType) {
+        return res.status(400).send("Tribute type mismatch with payment intent");
+      }
+
+      // Create the tribute
+      const tribute = await createOrUpdateTribute(orderId, data, req.files);
+
+      return res.status(201).send({
+        message: "Tribute created successfully",
+        tribute
+      });
+    } catch (e) {
+      console.error("Tribute confirmation error:", e.message);
+      return res.status(500).send(e.message || "Failed to confirm tribute creation");
+    }
+  });
+});
+
 router.post("/tribute/:orderId", async (req, res) => {
   const orderId = req.params.orderId;
 
@@ -816,8 +921,17 @@ router.post("/tribute/:orderId", async (req, res) => {
     }
 
     req.body = sanitizeBodyKeys(req.body);
+    const data = req.body;
 
     try {
+      // Check if this is a paid tribute (memory or flower with price)
+      const isPaidTribute = (data.tributeOptions === "memory" && data.memory?.finalPriceInCAD?.price > 0) ||
+                           (data.tributeOptions === "flower" && data.flower?.finalPriceInCAD?.price > 0);
+
+      if (isPaidTribute) {
+        return res.status(400).send("Paid tributes must use the payment flow. Use /tribute/:orderId/create-payment-intent first.");
+      }
+
       const tribute = await createOrUpdateTribute(orderId, req.body, req.files);
       res.status(201).send(tribute);
     } catch (e) {
