@@ -924,10 +924,8 @@ router.post("/tribute/:orderId", async (req, res) => {
     const data = req.body;
 
     try {
-      // Check if this is a paid tribute (memory or flower with price)
-      const isPaidTribute = (data.tributeOptions === "memory" && data.memory?.finalPriceInCAD?.price > 0) ||
-                           (data.tributeOptions === "flower" && data.flower?.finalPriceInCAD?.price > 0);
-
+      // Check if this is a paid tribute (memory with price)
+      const isPaidTribute = (data.tributeOptions === "memory" && data.memory?.finalPriceInCAD?.price > 0);
       if (isPaidTribute) {
         return res.status(400).send("Paid tributes must use the payment flow. Use /tribute/:orderId/create-payment-intent first.");
       }
