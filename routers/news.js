@@ -140,7 +140,7 @@ router.get("/news-category/active", async (req, res) => {
   }
 });
 
-router.get("/news-category/all", verifyTokenAndAdmin, async (req, res) => {
+router.get("/news-category/all", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
