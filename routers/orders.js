@@ -723,29 +723,20 @@ router.get("/:id", async (req, res) => {
     const order = await Order.findById(orderId)
       .populate({
         path: "tributeItems",
-        match: { tributeStatus: "Tribute Approved" }, // ✅ filter applied here
-        populate: [
-          { path: "card.cardTemplate" },
-          { path: "letter.letterTemplate" },
-          { path: "memory.finalPrice.country" },
-          { path: "flower.flowerType" },
-          { path: "flower.finalPrice.country" }
-        ]
+        match: { tributeStatus: "Tribute Approved" }
       })
       .populate("selectedBgColor")
       .populate("selectedPackage")
       .populate("selectedPrimaryImageBgFrame");
-
     if (!order) {
       return res.status(404).send("Order not found");
     }
-
     res.status(200).send(order);
   } catch (error) {
-    console.error(error);
     res.status(500).send("Error retrieving the order");
   }
 });
+
 router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const { id } = req.params;
