@@ -762,6 +762,34 @@ router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
+router.delete("/tribute/:tributeId", async (req, res) => {
+  try {
+    const tributeId = req.params.tributeId;
+
+    if (!mongoose.isValidObjectId(tributeId)) {
+      return res.status(400).send("Invalid tribute ID");
+    }
+
+    const tribute = await TributeItem.findOne({ _id: tributeId, isDeleted: false });
+
+    if (!tribute) {
+      return res.status(404).send("Tribute not found or already deleted");
+    }
+
+    tribute.isDeleted = true;
+    await tribute.save();
+
+    await Order.findByIdAndUpdate(tribute.order, {
+      $pull: { tributeItems: tribute._id }
+    });
+
+    res.send({ message: "Tribute deleted and removed from order", tribute });
+  } catch (e) {
+    console.error("Delete tribute error:", e);
+    res.status(500).send("Failed to delete tribute");
+  }
+});
+
 router.delete("/:userId/:orderId", verifyTokenAndAuthorization, async (req, res) => {
   try {
     const { userId, orderId } = req.params;
@@ -988,28 +1016,6 @@ router.get("/tribute/all", verifyTokenAndAdmin, async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
-});
-
-router.delete("/tribute/:tributeId", async (req, res) => {
-  try {
-    const tribute = await TributeItem.findOne({ _id: req.params.tributeId, isDeleted: false });
-
-    if (!tribute) {
-      return res.status(404).send("Tribute not found or already deleted");
-    }
-
-    tribute.isDeleted = true;
-    await tribute.save();
-
-    await Order.findByIdAndUpdate(tribute.order, {
-      $pull: { tributeItems: tribute._id }
-    });
-
-    res.send({ message: "Tribute deleted and removed from order", tribute });
-  } catch (e) {
-    console.error(e);
-    res.status(500).send("Failed to delete tribute");
-  }
 });
 
 // router.post("/donation", async (req, res) => {
