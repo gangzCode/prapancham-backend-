@@ -2268,7 +2268,7 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
         name: data.flower?.name,
         relationship: data.flower?.relationship,
         country: data.flower?.country,
-        deliveryStatus: data.flower?.deliveryStatus || "Needs To Be Delivered",
+        deliveryStatus: data.flower?.deliveryStatus || "Payment Needs To Be Done",
         finalPriceInCAD: data.flower?.finalPriceInCAD || undefined,
       };
       break;
