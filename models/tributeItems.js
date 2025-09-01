@@ -124,6 +124,17 @@ const tributeItemSchema = mongoose.Schema({
                 default: 'CAD',
             }
         },
+        finalPrice: {
+            country: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Country'
+            },
+            price: {
+                type: Number,
+                min: 0,
+                required: true,
+            }, 
+        },
     },
     flower: {
         flowerType: {
@@ -163,9 +174,9 @@ const tributeItemSchema = mongoose.Schema({
         },
         deliveryStatus: {
             type: String,
-            enum: ['Needs To Be Delivered', 'Delivered','Cancelled'],
+            enum: ['Payment Needs To Be Done','Needs To Be Delivered', 'Delivered','Cancelled'],
             required: true, 
-            default: 'Needs To Be Delivered'
+            default: 'Payment Needs To Be Done'
         },
     },
     tributeStatus: {
