@@ -233,6 +233,10 @@ const orderSchema = mongoose.Schema(
             default: 'CAD',
         }
     },
+    isDonationReceivable: {
+        type: Boolean,
+        default: false,
+    }
   },
   { timestamps: true }
 );

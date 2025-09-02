@@ -1746,12 +1746,11 @@ async function updateOrder(orderId, data, fileList) {
 
   if (
     !data.username ||
-    !data.accountDetails ||
     !data.contactDetails ||
     !data.selectedPackage ||
     !data.selectedCountry
   ) {
-    throw new Error("Missing fields: username, accountDetails, contactDetails, selectedPackage, selectedCountry");
+    throw new Error("Missing fields: username, contactDetails, selectedPackage, selectedCountry");
   }
 
   try {
@@ -1902,7 +1901,7 @@ async function updateOrder(orderId, data, fileList) {
     _id: orderId,
     username: data.username,
     information: data.information || {},
-    accountDetails: data.accountDetails,
+    accountDetails: data.accountDetails || {},
     contactDetails: data.contactDetails,
     selectedPackage: data.selectedPackage,
     selectedCountry: data.selectedCountry,
@@ -1914,6 +1913,7 @@ async function updateOrder(orderId, data, fileList) {
     basePackagePrice,
     finalPrice,
     finalPriceInCAD,
+    isDonationReceivable: data.isDonationReceivable || false,
     ...(fileList?.primaryImage?.[0] && { primaryImage: fileList.primaryImage[0].location }),
     ...(fileList?.thumbnailImage?.[0] && { thumbnailImage: fileList.thumbnailImage[0].location }),
     ...(fileList?.additionalImages && {
@@ -1953,12 +1953,11 @@ async function editOrder(orderId, data, fileList) {
 
   if (
     !data.username ||
-    !data.accountDetails ||
     !data.contactDetails ||
     !data.selectedPackage ||
     !data.selectedCountry
   ) {
-    throw new Error("Required fields missing: username, accountDetails, contactDetails, selectedPackage, selectedCountry");
+    throw new Error("Required fields missing: username, contactDetails, selectedPackage, selectedCountry");
   }
 
   try {
@@ -2152,7 +2151,7 @@ async function editOrder(orderId, data, fileList) {
   const updateData = {
     username: data.username,
     information: data.information || {},
-    accountDetails: data.accountDetails,
+    accountDetails: data.accountDetails || {},
     contactDetails: Array.isArray(data.contactDetails) ? data.contactDetails : [],
     selectedPackage: data.selectedPackage,
     selectedCountryName: country.name,
@@ -2164,6 +2163,7 @@ async function editOrder(orderId, data, fileList) {
     finalPrice,
     finalPriceInCAD,
     expiryDate,
+    isDonationReceivable: data.isDonationReceivable || false,
     ...(fileList?.primaryImage?.[0] && { primaryImage: fileList.primaryImage[0].location }),
     ...(fileList?.thumbnailImage?.[0] && { thumbnailImage: fileList.thumbnailImage[0].location }),
     ...(fileList?.additionalImages && {
