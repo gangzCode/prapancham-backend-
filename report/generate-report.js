@@ -46,21 +46,23 @@ function generateReport(filename, order, isSave = false) {
   // Generate invoice table rows
   const invoiceTable = [
     ["1", "Username", order.username || "N/A"],
-    ["2", "Title", order.information?.title || "N/A"],
-    ["3", "Description", order.information?.description || "N/A"],
-    ["4", "Package", order.selectedPackage?.name?.en?.[0]?.name || "N/A"],
+    ["2", "First Name", order.information?.firstName || "N/A"],
+    ["3", "Last Name", order.information?.lastName || "N/A"],
+    ["4", "Preferred Name", order.information?.preferredName || "N/A"],
+    ["5", "Description", order.information?.description || "N/A"],
+    ["6", "Package", order.selectedPackage?.name?.en?.[0]?.name || "N/A"],
     [
-      "5",
+      "7",
       "Package Price",
       formatCurrency(order.basePackagePrice?.price || 0, currencyCode),
     ],
-    ["6", "Selected Addons", processedAddons],
+    ["8", "Selected Addons", processedAddons],
     [
-      "7",
+      "9",
       "Final Price",
       formatCurrency(order.finalPrice?.price || 0, currencyCode),
     ],
-    ["8", "Order Status", order.orderStatus || "N/A"],
+    ["10", "Order Status", order.orderStatus || "N/A"],
   ];
 
   // You can add tax rows here if order has taxes array like in 2nd example

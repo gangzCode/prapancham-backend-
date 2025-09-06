@@ -7,7 +7,15 @@ const orderSchema = mongoose.Schema(
         required: true,
     },
     information:{
-        title: {
+        firstName: {
+            type: String,
+            default: ''
+        },
+        lastName: {
+            type: String,
+            default: ''
+        },
+        preferredName: {
             type: String,
             default: ''
         },

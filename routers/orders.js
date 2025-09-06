@@ -519,16 +519,20 @@ router.get('/by-selected-country/:countryId', async (req, res) => {
 });
 
 router.post('/search', async (req, res) => {
-  const { title } = req.body;
+  const { name } = req.body;
 
-  if (!title) {
-    return res.status(400).send("Title is required");
+  if (!name) {
+    return res.status(400).send("Name is required");
   }
 
   try {
     const orders = await Order.find({
       orderStatus: "Post Approved",
-      "information.title": { $regex: title, $options: "i" } // case-insensitive
+      $or: [
+        { "information.firstName": { $regex: name, $options: "i" } },
+        { "information.lastName": { $regex: name, $options: "i" } },
+        { "information.preferredName": { $regex: name, $options: "i" } }
+      ]
     });
 
     if (!orders.length) {

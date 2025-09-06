@@ -16,7 +16,9 @@ router.get("/", async (req, res) => {
     const orders = await Order.find({
       isDeleted: false,
       $or: [
-        { "information.title": searchRegex },
+        { "information.firstName": searchRegex },
+        { "information.lastName": searchRegex },
+        { "information.preferredName": searchRegex },
         { "information.shortDescription": searchRegex },
         { "information.description": searchRegex },
         { "contactDetails.name": searchRegex },
