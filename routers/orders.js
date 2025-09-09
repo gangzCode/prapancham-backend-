@@ -285,6 +285,41 @@ router.put("/:id/status", verifyTokenAndAdmin, async (req, res) => {
   }
 });
 
+router.put("/:id/expiry-date", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { expiryDate } = req.body;
+
+    if (!expiryDate) {
+      return res.status(400).json({ message: "expiryDate is required" });
+    }
+
+    // Validate date format
+    const parsedDate = new Date(expiryDate);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
+
+    const existingOrder = await Order.findById(id);
+    if (!existingOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      { expiryDate: parsedDate.toISOString() },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Order expiry date updated successfully",
+      order: updatedOrder
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get("/priority", async (req, res) => {
   try {
     const priorityOrders = await Order.find({ isDeleted: false, orderStatus:'Post Approved' })
