@@ -1031,6 +1031,55 @@ router.put("/tribute/:tributeId", async (req, res) => {
   }
 });
 
+router.put("/tribute/:tributeId/flower-delivery-status", verifyTokenAndAdmin, async (req, res) => {
+  try {
+    const { tributeId } = req.params;
+    const { deliveryStatus } = req.body;
+
+    const validDeliveryStatuses = [
+      'Payment Needs To Be Done',
+      'Needs To Be Delivered', 
+      'Delivered',
+      'Cancelled'
+    ];
+
+    if (!deliveryStatus || !validDeliveryStatuses.includes(deliveryStatus)) {
+      return res.status(400).json({ 
+        message: "Invalid or missing deliveryStatus",
+        validStatuses: validDeliveryStatuses
+      });
+    }
+
+    // Find tribute and verify it's a flower tribute
+    const tribute = await TributeItem.findOne({ 
+      _id: tributeId, 
+      isDeleted: false,
+      tributeOptions: 'flower'
+    });
+
+    if (!tribute) {
+      return res.status(404).json({ 
+        message: "Flower tribute not found or tribute is not of type 'flower'" 
+      });
+    }
+
+    // Update the flower delivery status
+    const updatedTribute = await TributeItem.findByIdAndUpdate(
+      tributeId,
+      { "flower.deliveryStatus": deliveryStatus },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Flower delivery status updated successfully",
+      tribute: updatedTribute
+    });
+  } catch (err) {
+    console.error("Failed to update flower delivery status:", err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get("/tribute/all", verifyTokenAndAdmin, async (req, res) => {
     try {
       const page = parseInt(req.query.page) || 1;
