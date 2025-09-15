@@ -2528,6 +2528,150 @@ async function generateAndDownloadReport(req, res) {
     }
   }
 }
+
+// Order count summary endpoint
+router.get("/count/order-count-summary", async (req, res) => {
+  try {
+    const now = new Date();
+    
+    // Daily count for the last 15 days
+    const fifteenDaysAgo = new Date(now);
+    fifteenDaysAgo.setDate(now.getDate() - 14);
+    
+    const dailyAggregation = await Order.aggregate([
+      {
+        $match: {
+          isDeleted: false,
+          createdAt: { $gte: fifteenDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 }
+      }
+    ]);
+
+    // Monthly count for the last 12 months
+    const twelveMonthsAgo = new Date(now);
+    twelveMonthsAgo.setMonth(now.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    
+    const monthlyAggregation = await Order.aggregate([
+      {
+        $match: {
+          isDeleted: false,
+          createdAt: { $gte: twelveMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 }
+      }
+    ]);
+
+    // Annual count
+    const annualAggregation = await Order.aggregate([
+      {
+        $match: {
+          isDeleted: false
+        }
+      },
+      {
+        $group: {
+          _id: { year: { $year: "$createdAt" } },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1 }
+      }
+    ]);
+
+    // Helper function to format dates
+    const formatDate = (day, month) => {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${months[month - 1]} ${day}`;
+    };
+
+    const getMonthName = (month) => {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return months[month - 1];
+    };
+
+    // Format daily data
+    const dailyMap = {};
+    dailyAggregation.forEach(item => {
+      const key = `${item._id.year}-${item._id.month}-${item._id.day}`;
+      dailyMap[key] = item.count;
+    });
+
+    const dailyCount = [];
+    for (let i = 14; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+      dailyCount.push({
+        name: formatDate(date.getDate(), date.getMonth() + 1),
+        value: dailyMap[key] || 0
+      });
+    }
+
+    // Format monthly data
+    const monthlyMap = {};
+    monthlyAggregation.forEach(item => {
+      const key = `${item._id.year}-${item._id.month}`;
+      monthlyMap[key] = item.count;
+    });
+
+    const monthlyCount = [];
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+    
+    // Generate months from January to current month of current year
+    for (let month = 1; month <= currentMonth; month++) {
+      const key = `${currentYear}-${month}`;
+      monthlyCount.push({
+        name: getMonthName(month),
+        value: monthlyMap[key] || 0
+      });
+    }
+
+    // Format annual data
+    const annualCount = annualAggregation.map(item => ({
+      name: item._id.year.toString(),
+      value: item.count
+    }));
+
+    res.status(200).json({
+      dailyCount,
+      monthlyCount,
+      annualCount
+    });
+
+  } catch (err) {
+    console.error("Error fetching order count summary:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
   
 function sanitizeBodyKeys(obj) {
     return Object.fromEntries(
