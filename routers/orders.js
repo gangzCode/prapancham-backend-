@@ -1422,10 +1422,93 @@ router.get("/donation/donations-summary", verifyTokenAndAdmin, async (req, res) 
         }
       },
       {
+        $lookup: {
+          from: "tributeitems",
+          localField: "tributeItems",
+          foreignField: "_id",
+          as: "tributeItemsData"
+        }
+      },
+      {
+        $lookup: {
+          from: "obituaryremembarancepackages",
+          localField: "selectedPackage",
+          foreignField: "_id",
+          as: "packageData"
+        }
+      },
+      {
+        $addFields: {
+          memoryTributes: {
+            $filter: {
+              input: "$tributeItemsData",
+              cond: { 
+                $and: [
+                  { $eq: ["$$this.tributeOptions", "memory"] },
+                  { $eq: ["$$this.isDeleted", false] }
+                ]
+              }
+            }
+          },
+          flowerTributes: {
+            $filter: {
+              input: "$tributeItemsData",
+              cond: { 
+                $and: [
+                  { $eq: ["$$this.tributeOptions", "flower"] },
+                  { $eq: ["$$this.isDeleted", false] }
+                ]
+              }
+            }
+          },
+          packageInfo: { $arrayElemAt: ["$packageData", 0] }
+        }
+      },
+      {
         $group: {
           _id: null,
           totalDonationReceived: { $sum: { $ifNull: ["$donationRecieved.price", 0] } },
-          totalDonationGivenBack: { $sum: { $ifNull: ["$donationGivenBack.price", 0] } }
+          totalDonationGivenBack: { $sum: { $ifNull: ["$donationGivenBack.price", 0] } },
+          totalMemoryMoneyReceived: {
+            $sum: {
+              $sum: {
+                $map: {
+                  input: "$memoryTributes",
+                  as: "tribute",
+                  in: { $ifNull: ["$$tribute.memory.finalPriceInCAD.price", 0] }
+                }
+              }
+            }
+          },
+          totalFlowerMoneyReceived: {
+            $sum: {
+              $sum: {
+                $map: {
+                  input: "$flowerTributes",
+                  as: "tribute",
+                  in: { $ifNull: ["$$tribute.flower.finalPriceInCAD.price", 0] }
+                }
+              }
+            }
+          },
+          remembrancePostIncome: {
+            $sum: {
+              $cond: [
+                { $eq: ["$packageInfo.isRemembarace", true] },
+                { $ifNull: ["$finalPriceInCAD.price", 0] },
+                0
+              ]
+            }
+          },
+          obituaryPostIncome: {
+            $sum: {
+              $cond: [
+                { $eq: ["$packageInfo.isObituary", true] },
+                { $ifNull: ["$finalPriceInCAD.price", 0] },
+                0
+              ]
+            }
+          }
         }
       },
       {
@@ -1433,6 +1516,10 @@ router.get("/donation/donations-summary", verifyTokenAndAdmin, async (req, res) 
           _id: 0,
           totalDonationReceived: { $round: ["$totalDonationReceived", 2] },
           totalDonationGivenBack: { $round: ["$totalDonationGivenBack", 2] },
+          totalMemoryMoneyReceived: { $round: ["$totalMemoryMoneyReceived", 2] },
+          totalFlowerMoneyReceived: { $round: ["$totalFlowerMoneyReceived", 2] },
+          remembrancePostIncome: { $round: ["$remembrancePostIncome", 2] },
+          obituaryPostIncome: { $round: ["$obituaryPostIncome", 2] },
           netDonation: {
             $round: [
               { $subtract: ["$totalDonationReceived", "$totalDonationGivenBack"] },
@@ -1446,6 +1533,10 @@ router.get("/donation/donations-summary", verifyTokenAndAdmin, async (req, res) 
     const summary = result[0] || {
       totalDonationReceived: 0,
       totalDonationGivenBack: 0,
+      totalMemoryMoneyReceived: 0,
+      totalFlowerMoneyReceived: 0,
+      remembrancePostIncome: 0,
+      obituaryPostIncome: 0,
       netDonation: 0
     };
 
