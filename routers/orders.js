@@ -510,6 +510,56 @@ router.get("/country-order-count", async (req, res) => {
   }
 });
 
+router.get('/country/:countryId', async (req, res) => {
+  const { countryId } = req.params;
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  if (!mongoose.isValidObjectId(countryId)) {
+    return res.status(400).json({ message: "Invalid country ID" });
+  }
+
+  try {
+    const filter = {
+      orderStatus: "Post Approved",
+      selectedCountry: countryId,
+      isDeleted: false,
+    };
+
+    const [orders, totalCount] = await Promise.all([
+      Order.find(filter)
+        .populate("selectedPackage")
+        .populate("selectedBgColor")
+        .populate("selectedPrimaryImageBgFrame")
+        .populate({
+          path: "finalPrice.country",
+          select: "name currencyCode",
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return res.status(200).json({
+      orders,
+      pagination: {
+        totalItems: totalCount,
+        currentPage: page,
+        totalPages,
+        pageSize: limit,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching orders by country:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 router.get('/by-selected-country/:countryId', async (req, res) => {
   const { countryId } = req.params;
 
@@ -748,31 +798,6 @@ router.delete("/donation/:id", verifyTokenAndAdmin, async (req, res) => {
   } catch (err) {
     console.error("Donation delete error:", err.message);
     return res.status(500).send("Failed to delete donation");
-  }
-});
-
-router.get("/:id", async (req, res) => {
-  const orderId = req.params.id;
-
-  if (!mongoose.isValidObjectId(orderId)) {
-    return res.status(400).send("Invalid Order ID");
-  }
-
-  try {
-    const order = await Order.findById(orderId)
-      .populate({
-        path: "tributeItems",
-        match: { tributeStatus: "Tribute Approved" }
-      })
-      .populate("selectedBgColor")
-      .populate("selectedPackage")
-      .populate("selectedPrimaryImageBgFrame");
-    if (!order) {
-      return res.status(404).send("Order not found");
-    }
-    res.status(200).send(order);
-  } catch (error) {
-    res.status(500).send("Error retrieving the order");
   }
 });
 
@@ -2670,6 +2695,32 @@ router.get("/count/order-count-summary", async (req, res) => {
   } catch (err) {
     console.error("Error fetching order count summary:", err);
     res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// Get single order by ID - MUST be at the end to avoid conflicts with other routes
+router.get("/:id", async (req, res) => {
+  const orderId = req.params.id;
+
+  if (!mongoose.isValidObjectId(orderId)) {
+    return res.status(400).send("Invalid Order ID");
+  }
+
+  try {
+    const order = await Order.findById(orderId)
+      .populate({
+        path: "tributeItems",
+        match: { tributeStatus: "Tribute Approved" }
+      })
+      .populate("selectedBgColor")
+      .populate("selectedPackage")
+      .populate("selectedPrimaryImageBgFrame");
+    if (!order) {
+      return res.status(404).send("Order not found");
+    }
+    res.status(200).send(order);
+  } catch (error) {
+    res.status(500).send("Error retrieving the order");
   }
 });
   
