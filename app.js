@@ -71,7 +71,7 @@ app.get('/', (req,res,next) =>{
     res.send("hello gangez")
 });
 
-//const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4000;
 
 // app.get('/', (req,res) =>{
 //     res.send(req.oidc.isAuthenticated()? 'Logged in' : 'Logged out')
@@ -99,9 +99,9 @@ const connectToDB = async () => {
 // Connect to DB only once before handling requests
 connectToDB();
 
-/* app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log('server is running http://localhost:4000');
-}); */
+});
 
 
 module.exports = app;
