@@ -99,9 +99,9 @@ const connectToDB = async () => {
 // Connect to DB only once before handling requests
 connectToDB();
 
-app.listen(PORT, () => {
+/*app.listen(PORT, () => {
   console.log('server is running http://localhost:4000');
-});
+});*/
 
 
 module.exports = app;
