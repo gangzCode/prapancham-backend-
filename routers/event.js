@@ -20,14 +20,14 @@ aws.config.update({
   region: process.env.SPACE_REGION,
 });
 
-const s3 = new S3Client({
-  //endpoint: process.env.SPACE_ENDPOINT,
+const s3 = new AWS.S3({
+  accessKeyId: process.env.SPACE_ACCESSKEYID,
+  secretAccessKey: process.env.SPACE_ACCESSKEYSECRET,
+  endpoint: process.env.SPACE_ENDPOINT,
   region: process.env.SPACE_REGION,
-  credentials: {
-    accessKeyId: process.env.SPACE_ACCESSKEYID,
-    secretAccessKey: process.env.SPACE_ACCESSKEYSECRET,
-  },
+  s3ForcePathStyle: true,
 });
+
 
 const FILE_TYPE_MAP = {
   "image/png": "png",
@@ -51,20 +51,19 @@ const storage = multer.diskStorage({
     cb(null, `${fileName}-${Date.now()}.${extension}`);
   },
 });
-
 const uploadAWS = (eventId) =>
   multer({
     storage: multerS3({
-      s3: s3,
-      acl: "public-read",
+      s3,
       bucket: process.env.SPACE_BUCKET_NAME,
-      key: function (req, file, cb) {
-        const uniqueFilename = `${eventId}/${uuid.v4()}-${Date.now()}-${file.originalname}`;
-        cb(null, uniqueFilename);
-      },
+      acl: "public-read",
       contentType: multerS3.AUTO_CONTENT_TYPE,
+      key: function (req, file, cb) {
+        const filename = `${eventId}/${uuid.v4()}-${Date.now()}-${file.originalname}`;
+        cb(null, filename);
+      },
     }),
-});
+  });
 
 const uploadOptions = multer({ storage: storage });
 
