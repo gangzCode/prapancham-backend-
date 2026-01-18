@@ -6,7 +6,7 @@ const { verifyToken, verifyTokenAndAuthorization, verifyTokenAndAdmin } = requir
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const fs = require("fs");
-const aws = require("aws-sdk");
+//const aws = require("aws-sdk");
 const uuid = require("uuid");
 const { S3Client } = require("@aws-sdk/client-s3");
 
@@ -14,14 +14,14 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-aws.config.update({
+/*aws.config.update({
   secretAccessKey: process.env.SPACE_ACCESSKEYSECRET,
   accessKeyId: process.env.SPACE_ACCESSKEYID,
   region: process.env.SPACE_REGION,
-});
+});*/
 
 const s3 = new S3Client({
-  endpoint: process.env.SPACE_ENDPOINT,
+  //endpoint: process.env.SPACE_ENDPOINT,
   region: process.env.SPACE_REGION,
   credentials: {
     accessKeyId: process.env.SPACE_ACCESSKEYID,
@@ -51,6 +51,7 @@ const storage = multer.diskStorage({
     cb(null, `${fileName}-${Date.now()}.${extension}`);
   },
 });
+
 const uploadAWS = (eventId) =>
   multer({
     storage: multerS3({
@@ -86,9 +87,18 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
         { name: "featuredEventImage", maxCount: 1 }
       ])(req, res, async (err) => {
         if (err) {
-          await Event.findByIdAndDelete(eventId);
-          return res.status(500).send("Image upload failed");
-        }
+        console.error("🔥 Multer / S3 upload error");
+        console.error("Name:", err.name);
+        console.error("Message:", err.message);
+        console.error("Full error:", err);
+
+        await Event.findByIdAndDelete(eventId);
+
+        return res.status(500).json({
+          message: "Image upload failed",
+          error: err.message,
+        });
+      }
   
         req.body = sanitizeBodyKeys(req.body);
   

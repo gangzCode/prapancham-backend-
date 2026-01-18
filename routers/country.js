@@ -6,7 +6,7 @@ const { verifyToken, verifyTokenAndAuthorization, verifyTokenAndAdmin } = requir
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const fs = require("fs");
-const aws = require("aws-sdk");
+//const aws = require("aws-sdk");
 const uuid = require("uuid");
 const { S3Client } = require("@aws-sdk/client-s3");
 
@@ -14,11 +14,11 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-aws.config.update({
+/*aws.config.update({
   secretAccessKey: process.env.SPACE_ACCESSKEYSECRET,
   accessKeyId: process.env.SPACE_ACCESSKEYID,
   region: process.env.SPACE_REGION,
-});
+});*/
 
 const s3 = new S3Client({
   //endpoint: process.env.SPACE_ENDPOINT,
