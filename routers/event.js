@@ -21,7 +21,7 @@ aws.config.update({
 });
 
 const s3 = new S3Client({
-  //endpoint: process.env.SPACE_ENDPOINT,
+  endpoint: process.env.SPACE_ENDPOINT,
   region: process.env.SPACE_REGION,
   credentials: {
     accessKeyId: process.env.SPACE_ACCESSKEYID,
