@@ -69,6 +69,7 @@ const uploadAWS = (eventId) =>
 const uploadOptions = multer({ storage: storage });
 
 router.post("/", verifyTokenAndAdmin, async (req, res) => {
+    console.log("🔥 EVENT CREATE ROUTE HIT");
     let eventId;
   
     try {
@@ -87,7 +88,7 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
         { name: "featuredEventImage", maxCount: 1 }
       ])(req, res, async (err) => {
         if (err) {
-        console.error("🔥 Multer / S3 upload error");
+        console.error("Multer / S3 upload error");
         console.error("Name:", err.name);
         console.error("Message:", err.message);
         console.error("Full error:", err);
