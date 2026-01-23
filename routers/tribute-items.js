@@ -639,7 +639,7 @@ async function updateCardTemplate(cardTemplateId,body,fileList) {
 async function updateLetterTemplate(letterTemplateId,body,fileList) { 
     const updateData = {
       isDeleted: false,
-      isActive: true,
+      isActive: body.isActive !== undefined ? body.isActive : true,
       name:body.name,
       ...(fileList?.image?.[0] && { image: fileList.image[0].location }),
     };
