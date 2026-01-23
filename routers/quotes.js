@@ -124,12 +124,12 @@ router.post("/update", verifyTokenAndAdmin, async (req, res) => {
           return res.status(500).send("The quote cannot be updated");
         }
   
-        const quote = await updateEvent(req.body.quoteId, req.body, req.files);
+        const quote = await updateQuote(req.body.quoteId, req.body, req.files);
         if (!quote) {
           return res.status(500).send("The quote cannot be updated");
         }
   
-        res.send(event);
+        res.send(quote);
       });
     } catch (e) {
       return res.status(500).send("The quote cannot be updated");
