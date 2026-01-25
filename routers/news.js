@@ -565,12 +565,56 @@ async function updateNews(newsId, data, fileList) {
     isActive: data.isActive !== undefined ? data.isActive : true,
     isDeleted: false,
     newsCategory: newsCategoryId,
-    ...(fileList?.thumbnailImage?.[0] && { thumbnailImage: fileList.thumbnailImage[0].location }),
-    ...(fileList?.mainImage?.[0] && { mainImage: fileList.mainImage[0].location }),
-    ...(fileList?.otherImages && {
-      otherImages: fileList.otherImages.map((img) => img.location)
-    })
   };
+
+  // Handle thumbnailImage: new upload, explicit deletion, or keep existing
+  if (fileList?.thumbnailImage?.[0]) {
+    updateData.thumbnailImage = fileList.thumbnailImage[0].location;
+  } else if (data.deleteThumbnailImage === 'true' || data.deleteThumbnailImage === true || 
+             data.thumbnailImage === 'null' || data.thumbnailImage === null || data.thumbnailImage === '') {
+    updateData.thumbnailImage = null;
+  } else if (data.thumbnailImage && typeof data.thumbnailImage === 'string' && data.thumbnailImage.startsWith('http')) {
+    updateData.thumbnailImage = data.thumbnailImage;
+  }
+
+  // Handle mainImage: new upload, explicit deletion, or keep existing
+  if (fileList?.mainImage?.[0]) {
+    updateData.mainImage = fileList.mainImage[0].location;
+  } else if (data.deleteMainImage === 'true' || data.deleteMainImage === true || 
+             data.mainImage === 'null' || data.mainImage === null || data.mainImage === '') {
+    updateData.mainImage = null;
+  } else if (data.mainImage && typeof data.mainImage === 'string' && data.mainImage.startsWith('http')) {
+    updateData.mainImage = data.mainImage;
+  }
+
+  // Handle otherImages: merge existing URLs with new uploads
+  if (fileList?.otherImages || (data.otherImages && data.otherImages !== '' && data.otherImages !== '[]' && data.otherImages !== 'null')) {
+    let existingImages = [];
+    
+    // Extract existing image URLs from data.otherImages
+    if (data.otherImages && data.otherImages !== '[]' && data.otherImages !== 'null' && data.otherImages !== '') {
+      if (typeof data.otherImages === 'string') {
+        // Single URL or comma-separated URLs
+        existingImages = data.otherImages.split(',').map(url => url.trim()).filter(url => url.startsWith('http'));
+      } else if (Array.isArray(data.otherImages)) {
+        existingImages = data.otherImages.filter(url => typeof url === 'string' && url.startsWith('http'));
+      }
+    }
+    
+    // Add newly uploaded images
+    const newImages = fileList?.otherImages ? fileList.otherImages.map(img => img.location) : [];
+    
+    // Merge existing and new images
+    updateData.otherImages = [...existingImages, ...newImages];
+  } else if (data.deleteOtherImages === 'true' || data.deleteOtherImages === true || 
+             data.otherImages === '' || data.otherImages === '[]' || data.otherImages === 'null' || 
+             (data.otherImages === undefined && (data.thumbnailImage !== undefined || data.mainImage !== undefined))) {
+    // Clear otherImages if:
+    // - Explicit deletion flag
+    // - Empty string/array sent
+    // - otherImages is undefined but other image fields are being updated (indicates user is editing images and removed otherImages)
+    updateData.otherImages = [];
+  }
 
   const updatedNews = await News.findByIdAndUpdate(newsId, updateData, { new: true });
   return updatedNews;
