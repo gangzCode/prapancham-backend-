@@ -10,7 +10,12 @@ const cors = require('cors');
 app.use('/public', express.static('public'));
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token']
+}));
 app.options('*', cors());
 //Auth 0 middleware
 // app.use(
@@ -71,8 +76,6 @@ app.get('/', (req,res,next) =>{
     res.send("hello gangez")
 });
 
-//const PORT = process.env.PORT || 4000;
-
 // app.get('/', (req,res) =>{
 //     res.send(req.oidc.isAuthenticated()? 'Logged in' : 'Logged out')
 // })
@@ -99,9 +102,10 @@ const connectToDB = async () => {
 // Connect to DB only once before handling requests
 connectToDB();
 
-/* app.listen(PORT, () => {
-  console.log('server is running http://localhost:4000');
-}); */
+const PORT = process.env.PORT || 4000;
 
+app.listen(PORT, () => {
+  console.log('server is running http://localhost:4000');
+});
 
 module.exports = app;
