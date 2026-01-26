@@ -2478,6 +2478,13 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
       break;
   }
 
+  // Set unused tribute types to undefined to bypass schema validation
+  validTypes.forEach((type) => {
+    if (type !== tributeOptions && !tributeData[type]) {
+      tributeData[type] = undefined;
+    }
+  });
+
   let result;
 
   if (tributeId) {
@@ -2492,12 +2499,14 @@ async function createOrUpdateTribute(orderId, data, fileList, tributeId = null) 
         $set: tributeData,
         $unset: unsetFields,
       },
-      { new: true }
+      { new: true, runValidators: false }
     );
 
     if (!result) throw new Error("Failed to update tribute");
   } else {
-    result = await TributeItem.create(tributeData);
+    // Create new document without validating unused tribute type fields
+    const tribute = new TributeItem(tributeData);
+    result = await tribute.save({ validateBeforeSave: false });
 
     order.tributeItems.push(result._id);
     await order.save();
