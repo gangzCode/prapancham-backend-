@@ -1331,27 +1331,63 @@ router.post("/donation", async (req, res) => {
     return res.status(400).send("Missing required fields: orderId, donationAmount, countryId");
   }
 
-  try {
-    /*
-    // Optionally verify payment intent if provided
-    if (paymentIntentId) {
-      const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (intent.status !== "succeeded") {
-        return res.status(400).send("Payment not successful or not completed");
-      }
-    }
-    */
+  // Validate donationAmount is a valid number
+  const parsedDonationAmount = parseFloat(donationAmount);
+  if (isNaN(parsedDonationAmount) || parsedDonationAmount <= 0) {
+    return res.status(400).send("Invalid donationAmount: must be a positive number");
+  }
 
+  try {
     const order = await Order.findById(orderId);
     if (!order) return res.status(400).send("Invalid orderId");
+
+    const country = await Country.findOne({ _id: countryId, isActive: true, isDeleted: false });
+    if (!country) return res.status(400).send("Invalid country");
+
+    // Calculate finalPriceInCAD if not provided
+    let calculatedFinalPriceInCAD = finalPriceInCAD;
+    
+    if (!calculatedFinalPriceInCAD || !calculatedFinalPriceInCAD.price) {
+      if (country.currencyCode.toLowerCase() === "cad") {
+        calculatedFinalPriceInCAD = {
+          price: parsedDonationAmount,
+          currencyCode: "CAD"
+        };
+      } else {
+        // Convert to CAD
+        try {
+          const response = await fetch(`https://api.exchangerate.host/convert?from=${country.currencyCode}&to=CAD&amount=${parsedDonationAmount}&access_key=${process.env.EXCHANGE_RATE_KEY}`);
+          const result = await response.json();
+          
+          if (!result || typeof result.result !== "number") {
+            return res.status(500).send("Currency conversion failed");
+          }
+          
+          calculatedFinalPriceInCAD = {
+            price: result.result,
+            currencyCode: "CAD"
+          };
+        } catch (conversionErr) {
+          console.error("Currency conversion error:", conversionErr);
+          return res.status(500).send("Failed to convert currency to CAD");
+        }
+      }
+    }
+
+    // Validate the calculated price is a valid number
+    const cadPrice = parseFloat(calculatedFinalPriceInCAD.price);
+    if (isNaN(cadPrice) || cadPrice <= 0) {
+      console.error("Invalid CAD price calculated:", calculatedFinalPriceInCAD);
+      return res.status(500).send("Invalid price calculation");
+    }
 
     // Create donation document
     const donation = new Donation({
       name,
       email,
       order: orderId,
-      finalPrice: { country: countryId, price: donationAmount },
-      finalPriceInCAD: finalPriceInCAD || { price: donationAmount, currencyCode: "CAD" },
+      finalPrice: { country: countryId, price: parsedDonationAmount },
+      finalPriceInCAD: { price: cadPrice, currencyCode: "CAD" },
       stripePaymentIntentId: paymentIntentId || null,
       adminDonationStatus: "Donation Recieved",
     });
@@ -1363,9 +1399,13 @@ router.post("/donation", async (req, res) => {
       order.recievedDonations.push(donation._id);
     }
 
-    order.donationRecieved = order.donationRecieved || { price: 0, currencyCode: "CAD" };
-    order.donationRecieved.price += donation.finalPriceInCAD.price;
-    order.donationRecieved.currencyCode = donation.finalPriceInCAD.currencyCode;
+    // Initialize or update donationRecieved with proper validation
+    if (!order.donationRecieved || typeof order.donationRecieved.price !== "number" || isNaN(order.donationRecieved.price)) {
+      order.donationRecieved = { price: 0, currencyCode: "CAD" };
+    }
+    
+    order.donationRecieved.price = parseFloat(order.donationRecieved.price) + cadPrice;
+    order.donationRecieved.currencyCode = "CAD";
 
     await order.save();
 
